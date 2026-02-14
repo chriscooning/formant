@@ -35,12 +35,12 @@ describe("buildFormHTML", () => {
 
   it("includes React CDN tag", () => {
     const html = buildFormHTML(simpleSchema);
-    expect(html).toContain("unpkg.com/react@19");
+    expect(html).toContain("unpkg.com/react@18");
   });
 
   it("includes ReactDOM CDN tag", () => {
     const html = buildFormHTML(simpleSchema);
-    expect(html).toContain("unpkg.com/react-dom@19");
+    expect(html).toContain("unpkg.com/react-dom@18");
   });
 
   it("includes SheetJS CDN tag", () => {

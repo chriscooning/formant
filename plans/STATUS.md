@@ -14,7 +14,7 @@ Track which phases are complete. Each agent session should read this first and u
 | 1E-2 | Main Component & Auto-Save | **complete** | Formant component, useAutoSave hook, entry point, 13 tests pass, tsc clean |
 | 1F | HTML Builder | **complete** | 12 tests pass, tsc clean, smoke test generates 46KB HTML |
 | 1G | E2E Tests | **complete** | 20/20 non-skipped tests pass; 4 submit stubs skipped (Phase 4) |
-| 1-Skill | Claude Skill (Initial) | not started | Depends on 1F |
+| 1-Skill | Claude Skill (Initial) | **complete** | SKILL.md + product-feedback example (JSON + 49KB HTML), tsc clean, no regressions |
 | 2 | Google Sheets Connector | **complete** | Apps Script + SETUP.md, hardened sheets.ts (field titles, arrays, truncation, booleans), skill updated, 23 submit tests pass, tsc clean |
 | 3A | Service Database & Middleware | **complete** | 18 tests pass, tsc clean, D1 schema + queries + CORS + auth middleware + Hono skeleton |
 | 3B | Service API Routes & Tests | not started | Depends on 3A + 1F |

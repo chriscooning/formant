@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Feedback</title>
+  <style>
+/* 1. Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500&family=Space+Mono:wght@400&display=swap');
+
+/* 2. :root variables (dark mode defaults) */
+:root {
+  --ff-bg: #0a0a0c;
+  --ff-surface: #0e0e12;
+  --ff-surface-hover: #131318;
+  --ff-border: #1a1a1f;
+  --ff-border-hover: #333;
+  --ff-text: #e0e0e0;
+  --ff-text-secondary: #666;
+  --ff-text-muted: #444;
+  --ff-text-faint: #333;
+  --ff-accent: #6c5ce7;
+  --ff-accent-hover: #5a4bd1;
+  --ff-accent-glow: rgba(108, 92, 231, 0.12);
+  --ff-error: #ff6b6b;
+  --ff-success: #51cf66;
+  --ff-radius: 10px;
+  --ff-font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ff-font-mono: 'Space Mono', 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+  --ff-transition: 0.2s ease;
+  --ff-transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 3. @media (prefers-color-scheme: light) overrides */
+@media (prefers-color-scheme: light) {
+  :root {
+    --ff-bg: #fafafa;
+    --ff-surface: #ffffff;
+    --ff-surface-hover: #f5f5f5;
+    --ff-border: #e5e5e5;
+    --ff-border-hover: #ccc;
+    --ff-text: #1a1a1a;
+    --ff-text-secondary: #888;
+    --ff-text-muted: #aaa;
+    --ff-text-faint: #ddd;
+    --ff-accent: #6c5ce7;
+    --ff-accent-hover: #5a4bd1;
+    --ff-accent-glow: rgba(108, 92, 231, 0.08);
+    --ff-error: #e03131;
+    --ff-success: #2f9e44;
+  }
+}
+
+/* 4. [data-theme="light"] overrides (manual toggle — overrides media query) */
+[data-theme="light"] {
+  --ff-bg: #fafafa;
+  --ff-surface: #ffffff;
+  --ff-surface-hover: #f5f5f5;
+  --ff-border: #e5e5e5;
+  --ff-border-hover: #ccc;
+  --ff-text: #1a1a1a;
+  --ff-text-secondary: #888;
+  --ff-text-muted: #aaa;
+  --ff-text-faint: #ddd;
+  --ff-accent: #6c5ce7;
+  --ff-accent-hover: #5a4bd1;
+  --ff-accent-glow: rgba(108, 92, 231, 0.08);
+  --ff-error: #e03131;
+  --ff-success: #2f9e44;
+}
+
+/* 5. [data-theme="dark"] overrides (manual toggle — overrides media query) */
+[data-theme="dark"] {
+  --ff-bg: #0a0a0c;
+  --ff-surface: #0e0e12;
+  --ff-surface-hover: #131318;
+  --ff-border: #1a1a1f;
+  --ff-border-hover: #333;
+  --ff-text: #e0e0e0;
+  --ff-text-secondary: #666;
+  --ff-text-muted: #444;
+  --ff-text-faint: #333;
+  --ff-accent: #6c5ce7;
+  --ff-accent-hover: #5a4bd1;
+  --ff-accent-glow: rgba(108, 92, 231, 0.12);
+  --ff-error: #ff6b6b;
+  --ff-success: #51cf66;
+}
+
+/* 6. Reset */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 7. Base */
+html, body {
+  height: 100%;
+  font-family: var(--ff-font-sans);
+  background: var(--ff-bg);
+  color: var(--ff-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+/* 8. Progress bar */
+.ff-progress { position: fixed; top: 0; left: 0; width: 100%; height: 2px; z-index: 100; }
+.ff-progress-bar { height: 100%; background: var(--ff-accent); transition: width var(--ff-transition-slow); }
+
+/* 9. Question container + transition states */
+.ff-question-container { max-width: 600px; width: 100%; }
+.ff-transition { }
+.ff-transition-entering { opacity: 0; transform: translateY(20px); }
+.ff-transition-active { opacity: 1; transform: translateY(0); transition: all var(--ff-transition-slow); }
+.ff-transition-exiting { opacity: 0; transform: translateY(-20px); transition: all var(--ff-transition); }
+
+/* 10. Typography */
+.ff-question-number {
+  font-family: var(--ff-font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--ff-text-secondary);
+  margin-bottom: 16px;
+}
+
+.ff-question-title {
+  font-family: var(--ff-font-sans);
+  font-weight: 500;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.ff-question-subtitle {
+  font-family: var(--ff-font-sans);
+  font-weight: 300;
+  font-size: 15px;
+  color: var(--ff-text-secondary);
+  margin-bottom: 32px;
+}
+
+/* 11. Input styles */
+.ff-input-underline {
+  border: none;
+  border-bottom: 1px solid var(--ff-border);
+  background: transparent;
+  font-size: 18px;
+  font-family: var(--ff-font-sans);
+  color: var(--ff-text);
+  padding: 12px 0;
+  width: 100%;
+  outline: none;
+}
+
+.ff-input-underline:focus {
+  border-color: var(--ff-accent);
+}
+
+.ff-textarea {
+  border: 1px solid var(--ff-border);
+  border-radius: var(--ff-radius);
+  background: transparent;
+  font-size: 18px;
+  font-family: var(--ff-font-sans);
+  color: var(--ff-text);
+  padding: 16px;
+  width: 100%;
+  outline: none;
+  resize: vertical;
+}
+
+.ff-textarea:focus {
+  border-color: var(--ff-accent);
+}
+
+.ff-date-input {
+  border: none;
+  border-bottom: 1px solid var(--ff-border);
+  background: transparent;
+  font-size: 18px;
+  font-family: var(--ff-font-sans);
+  color: var(--ff-text);
+  padding: 12px 0;
+  width: 100%;
+  outline: none;
+  color-scheme: dark;
+}
+
+.ff-date-input:focus {
+  border-color: var(--ff-accent);
+}
+
+@media (prefers-color-scheme: light) {
+  .ff-date-input { color-scheme: light; }
+}
+
+[data-theme="light"] .ff-date-input { color-scheme: light; }
+[data-theme="dark"] .ff-date-input { color-scheme: dark; }
+
+/* 12. Choice cards + stagger animation */
+.ff-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ff-choice-card {
+  border: 1px solid var(--ff-border);
+  padding: 28px 24px;
+  border-radius: var(--ff-radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all var(--ff-transition);
+  animation: ff-stagger-in 0.3s ease forwards;
+  opacity: 0;
+}
+
+.ff-choice-card:hover {
+  border-color: var(--ff-border-hover);
+  background: var(--ff-surface-hover);
+  transform: translateY(-2px);
+}
+
+.ff-choice-card--selected {
+  border-color: var(--ff-accent);
+  background: var(--ff-accent-glow);
+}
+
+.ff-choice-key {
+  font-family: var(--ff-font-mono);
+  font-size: 11px;
+  border: 1px solid var(--ff-border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  min-width: 28px;
+  text-align: center;
+}
+
+@keyframes ff-stagger-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 13. Rating stars */
+.ff-rating-stars { display: flex; gap: 8px; }
+.ff-star { font-size: 28px; cursor: pointer; transition: color var(--ff-transition); color: var(--ff-text-muted); }
+.ff-star--filled { color: var(--ff-accent); }
+.ff-star--hover { color: var(--ff-accent); opacity: 0.7; }
+
+/* 14. Scale buttons */
+.ff-scale-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.ff-scale-btn {
+  font-family: var(--ff-font-mono);
+  min-width: 44px;
+  height: 44px;
+  border: 1px solid var(--ff-border);
+  border-radius: var(--ff-radius);
+  cursor: pointer;
+  background: transparent;
+  color: var(--ff-text);
+}
+
+.ff-scale-btn:hover { background: var(--ff-surface-hover); }
+
+.ff-scale-btn--selected {
+  background: var(--ff-accent);
+  color: white;
+  border-color: var(--ff-accent);
+}
+
+.ff-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: var(--ff-font-mono);
+  font-size: 9px;
+  color: var(--ff-text-muted);
+}
+
+/* 15. Yes/No cards */
+.ff-yesno { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.ff-yesno-card {
+  border: 1px solid var(--ff-border);
+  padding: 40px 24px;
+  border-radius: var(--ff-radius);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  transition: all var(--ff-transition);
+  text-align: center;
+}
+
+.ff-yesno-card:hover {
+  border-color: var(--ff-border-hover);
+  background: var(--ff-surface-hover);
+  transform: translateY(-2px);
+}
+
+.ff-yesno-card--selected {
+  border-color: var(--ff-accent);
+  background: var(--ff-accent-glow);
+}
+
+.ff-yesno-hint {
+  font-family: var(--ff-font-mono);
+  font-size: 11px;
+  color: var(--ff-text-muted);
+  margin-top: 8px;
+}
+
+/* 16. Dropdown */
+.ff-dropdown { position: relative; }
+
+.ff-dropdown-trigger {
+  border: none;
+  border-bottom: 1px solid var(--ff-border);
+  background: transparent;
+  font-size: 18px;
+  font-family: var(--ff-font-sans);
+  color: var(--ff-text);
+  padding: 12px 0;
+  width: 100%;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ff-dropdown-trigger:focus {
+  border-color: var(--ff-accent);
+}
+
+.ff-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: var(--ff-surface);
+  border: 1px solid var(--ff-border);
+  border-radius: var(--ff-radius);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.ff-dropdown-option {
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.ff-dropdown-option:hover {
+  background: var(--ff-surface-hover);
+}
+
+.ff-dropdown-option--highlighted {
+  background: var(--ff-accent-glow);
+}
+
+.ff-dropdown-search {
+  position: sticky;
+  top: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ff-border);
+  background: var(--ff-surface);
+}
+
+/* 17. Buttons */
+.ff-btn-primary {
+  background: var(--ff-accent);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: var(--ff-font-sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--ff-transition);
+}
+
+.ff-btn-primary:hover {
+  background: var(--ff-accent-hover);
+  transform: translateY(-1px);
+}
+
+.ff-btn-primary:active {
+  transform: translateY(0);
+}
+
+.ff-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--ff-border);
+  color: var(--ff-text);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: var(--ff-font-sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--ff-transition);
+}
+
+.ff-btn-ghost:hover {
+  border-color: var(--ff-border-hover);
+  background: var(--ff-surface-hover);
+}
+
+/* 18. Error state + shake animation */
+.ff-error-message {
+  color: var(--ff-error);
+  font-family: var(--ff-font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-top: 12px;
+  animation: ff-shake 0.3s ease;
+}
+
+@keyframes ff-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* 19. Keyboard hints */
+.ff-keyboard-hint {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ff-keyboard-hint kbd {
+  font-family: var(--ff-font-mono);
+  font-size: 11px;
+  color: var(--ff-text-muted);
+  border: 1px solid var(--ff-border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: var(--ff-surface);
+}
+
+/* 20. Theme toggle */
+.ff-theme-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: 1px solid var(--ff-border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--ff-font-mono);
+  color: var(--ff-text-muted);
+  z-index: 100;
+}
+
+.ff-theme-toggle:hover {
+  border-color: var(--ff-border-hover);
+}
+
+/* 21. Ending screen + checkmark animation */
+.ff-ending {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ff-ending-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--ff-accent);
+  background: var(--ff-accent-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ff-scale-in 0.3s ease;
+  margin-bottom: 24px;
+}
+
+.ff-ending-check {
+  width: 20px;
+  height: 10px;
+  border-left: 2px solid var(--ff-accent);
+  border-bottom: 2px solid var(--ff-accent);
+  transform: rotate(-45deg) translateY(-2px);
+  animation: ff-check-draw 0.2s ease 0.3s forwards;
+  opacity: 0;
+}
+
+@keyframes ff-scale-in { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes ff-check-draw { to { opacity: 1; } }
+
+.ff-ending-summary {
+  margin-top: 32px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.ff-ending-summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ff-border);
+}
+
+/* 22. Responsive */
+@media (max-width: 640px) {
+  #root { padding: 24px 16px; }
+  .ff-question-title { font-size: 18px; }
+  .ff-yesno { grid-template-columns: 1fr; }
+  .ff-choice-card { padding: 20px 16px; }
+  .ff-scale-buttons { gap: 4px; }
+  .ff-scale-btn { min-width: 36px; height: 36px; }
+}
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>
+    var __FORMANT_SCHEMA__ = {"id":"product-feedback","title":"Product Feedback","fields":[{"id":"welcome","type":"welcome","title":"We'd love your feedback","subtitle":"Takes about 2 minutes. Your responses help us improve.","buttonText":"Get Started"},{"id":"name","type":"text","title":"What's your name?","placeholder":"Type your name...","required":true},{"id":"email","type":"email","title":"What's your email?","subtitle":"We'll only use this to follow up if needed.","placeholder":"you@example.com","required":true},{"id":"role","type":"choice","title":"What best describes your role?","options":["Developer","Designer","Product Manager","Executive","Other"],"allowOther":true},{"id":"satisfaction","type":"rating","title":"How satisfied are you with the product?","required":true,"max":5,"labels":{"1":"Very poor","3":"Okay","5":"Excellent"}},{"id":"recommend","type":"scale","title":"How likely are you to recommend us?","min":0,"max":10,"minLabel":"Not at all likely","maxLabel":"Extremely likely"},{"id":"favorite-feature","type":"choice","title":"What's your favorite feature?","options":["Speed","Design","Reliability","Integrations","Support"],"next":{"Support":"support-detail","default":"improvements"}},{"id":"support-detail","type":"textarea","title":"Tell us about your support experience","subtitle":"What went well? What could be better?","placeholder":"Share your experience...","next":"improvements"},{"id":"improvements","type":"textarea","title":"What would you most like us to improve?","placeholder":"Your suggestions..."},{"id":"use-again","type":"yes_no","title":"Would you use this product again?"},{"id":"end","type":"ending","title":"Thank you!","subtitle":"Your feedback is incredibly valuable to us.","showSummary":true}],"submit":{"destinations":[{"type":"excel","filename":"product-feedback"}]},"theme":{"accent":"#6c5ce7"}};
+    var require=function(m){var R=window.React,D=window.ReactDOM;var j={jsx:function(t,p,k){if(k!==void 0){var n={};for(var i in p)n[i]=p[i];n.key=k;return R.createElement(t,n)}return R.createElement(t,p)},jsxs:function(t,p,k){if(k!==void 0){var n={};for(var i in p)n[i]=p[i];n.key=k;return R.createElement(t,n)}return R.createElement(t,p)},Fragment:R.Fragment};if(m==="react")return R;if(m==="react/jsx-runtime"||m==="react/jsx-dev-runtime")return j;if(m==="react-dom"||m==="react-dom/client")return D;throw new Error("Cannot require "+m)};
+(()=>{var yt=Object.create;var xe=Object.defineProperty;var vt=Object.getOwnPropertyDescriptor;var xt=Object.getOwnPropertyNames;var wt=Object.getPrototypeOf,St=Object.prototype.hasOwnProperty;var d=(e=>typeof require<"u"?require:typeof Proxy<"u"?new Proxy(e,{get:(t,n)=>(typeof require<"u"?require:t)[n]}):e)(function(e){if(typeof require<"u")return require.apply(this,arguments);throw Error('Dynamic require of "'+e+'" is not supported')});var kt=(e,t,n,o)=>{if(t&&typeof t=="object"||typeof t=="function")for(let i of xt(t))!St.call(e,i)&&i!==n&&xe(e,i,{get:()=>t[i],enumerable:!(o=vt(t,i))||o.enumerable});return e};var Ft=(e,t,n)=>(n=e!=null?yt(wt(e)):{},kt(t||!e||!e.__esModule?xe(n,"default",{value:e,enumerable:!0}):n,e));var E=Ft(d("react"),1);var j=d("react");function we(e,t){if(e.type==="welcome"||e.type==="statement"||e.type==="ending")return null;if(e.required){if(t==null||t==="")return`${e.title} is required`;if(e.type==="multi_choice"&&Array.isArray(t)&&t.length===0)return`${e.title} is required`}if(t==null||t==="")return null;switch(e.type){case"text":case"textarea":return typeof t!="string"?`${e.title} must be a string`:e.minLength!==void 0&&t.length<e.minLength?`${e.title} must be at least ${e.minLength} characters`:e.maxLength!==void 0&&t.length>e.maxLength?`${e.title} must be at most ${e.maxLength} characters`:e.type==="text"&&e.pattern&&!new RegExp(e.pattern).test(t)?`${e.title} does not match the required format`:null;case"email":return typeof t!="string"?`${e.title} must be a string`:/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)?null:`${e.title} must be a valid email address`;case"number":{let n=typeof t=="string"?Number(t):t;return typeof n!="number"||isNaN(n)?`${e.title} must be a number`:e.min!==void 0&&n<e.min?`${e.title} must be at least ${e.min}`:e.max!==void 0&&n>e.max?`${e.title} must be at most ${e.max}`:null}case"url":return typeof t!="string"?`${e.title} must be a string`:!t.startsWith("http://")&&!t.startsWith("https://")?`${e.title} must start with http:// or https://`:null;case"phone":return typeof t!="string"?`${e.title} must be a string`:t.replace(/[^0-9]/g,"").length<7?`${e.title} must have at least 7 digits`:/^[+\d\s\-()]+$/.test(t)?null:`${e.title} contains invalid characters`;case"choice":return typeof t!="string"?`${e.title} must be a string`:!e.options.includes(t)&&!e.allowOther?`${e.title} must be one of the available options`:null;case"multi_choice":{if(!Array.isArray(t))return`${e.title} must be an array of selections`;for(let o of t)if(typeof o!="string"||!e.options.includes(o))return`${e.title} contains an invalid option: ${String(o)}`;let n=e.minSelections??(e.required?1:0);return t.length<n?`${e.title} requires at least ${n} selection(s)`:e.maxSelections!==void 0&&t.length>e.maxSelections?`${e.title} allows at most ${e.maxSelections} selection(s)`:null}case"rating":{let n=e.max??5;return typeof t!="number"||!Number.isInteger(t)?`${e.title} must be an integer`:t<1||t>n?`${e.title} must be between 1 and ${n}`:null}case"scale":return typeof t!="number"||!Number.isInteger(t)?`${e.title} must be an integer`:t<e.min||t>e.max?`${e.title} must be between ${e.min} and ${e.max}`:null;case"yes_no":{let n=e.yesLabel??"Yes",o=e.noLabel??"No";return t===!0||t===n||t===!1||t===o?null:`${e.title} must be "${n}" or "${o}"`}case"date":{if(typeof t!="string")return`${e.title} must be a date string`;let n=new Date(t);if(isNaN(n.getTime()))return`${e.title} is not a valid date`;if(e.minDate){let o=new Date(e.minDate);if(n<o)return`${e.title} must be on or after ${e.minDate}`}if(e.maxDate){let o=new Date(e.maxDate);if(n>o)return`${e.title} must be on or before ${e.maxDate}`}return null}case"dropdown":return typeof t!="string"?`${e.title} must be a string`:e.options.includes(t)?null:`${e.title} must be one of the available options`;default:return null}}function Se(){return{currentIndex:0,answers:{},history:[],startedAt:Date.now()}}function Nt(e,t,n){let o=e[t];if(o?.next!==void 0){if(typeof o.next=="string"){let s=e.findIndex(a=>a.id===o.next);if(s!==-1)return s}else if(typeof o.next=="object"){let s=o.next;if(o.type==="multi_choice"&&Array.isArray(n))for(let r of n){let c=s[String(r)];if(c!==void 0){let u=e.findIndex(p=>p.id===c);if(u!==-1)return u}}else{let r=s[String(n)];if(r!==void 0){let c=e.findIndex(u=>u.id===r);if(c!==-1)return c}}let a=s.default;if(a!==void 0){let r=e.findIndex(c=>c.id===a);if(r!==-1)return r}}}let i=t+1;return Math.min(i,e.length)}function ke(e,t){if(e.currentIndex>=t.length)return null;let n=t[e.currentIndex];if(!n)return null;let o=e.answers[n.id],i=Nt(t,e.currentIndex,o);return{...e,currentIndex:i,history:[...e.history,e.currentIndex]}}function Fe(e){if(e.history.length===0)return null;let t=[...e.history],n=t.pop();return{...e,currentIndex:n,history:t}}function Ne(e,t,n){return{...e,answers:{...e.answers,[t]:n}}}var Rt=new Set(["welcome","ending","statement"]);function Re(e,t){let n=t.filter(s=>!Rt.has(s.type)),o=n.length;if(o===0)return 100;let i=n.filter(s=>e.answers[s.id]!==void 0).length;return Math.min(100,Math.max(0,Math.round(i/o*100)))}function Ee(e,t){return e.currentIndex>=t.length?!0:t[e.currentIndex]?.type==="ending"}function Te(e){let[t,n]=(0,j.useState)(()=>Se()),[o,i]=(0,j.useState)(null),s=t.currentIndex<e.fields.length?e.fields[t.currentIndex]??null:null,a=Re(t,e.fields),r=Ee(t,e.fields),c=(0,j.useCallback)(()=>{let l=t.currentIndex<e.fields.length?e.fields[t.currentIndex]??null:null;if(l){let v=t.answers[l.id],g=we(l,v);if(g)return i(g),!1}i(null);let f=ke(t,e.fields);return f&&n(f),!0},[t,e.fields]),u=(0,j.useCallback)(()=>{i(null);let l=Fe(t);l&&n(l)},[t]),p=(0,j.useCallback)((l,f)=>{i(null),n(v=>Ne(v,l,f))},[]);return{currentField:s,currentIndex:t.currentIndex,answers:t.answers,progress:a,complete:r,error:o,goNext:c,goBack:u,setAnswer:p,setError:i,state:t}}var Ce=d("react");function Ie(e){let{onNext:t,onBack:n,onSelect:o,currentField:i,phase:s,inputFocused:a}=e;(0,Ce.useEffect)(()=>{if(s!=="active")return;function r(c){let u=c.key,p=i?.type??null;if(u==="Enter"){if(p==="textarea"){c.shiftKey&&(c.preventDefault(),t());return}c.preventDefault(),t();return}if(u==="Backspace"&&!a){c.preventDefault(),n();return}if((p==="choice"||p==="multi_choice")&&/^[a-zA-Z]$/.test(u)){c.preventDefault(),o(u.toUpperCase());return}if(p==="yes_no"&&/^[ynYN]$/.test(u)){c.preventDefault(),o(u.toUpperCase());return}if((p==="rating"||p==="scale")&&/^[0-9]$/.test(u)){c.preventDefault(),o(u);return}}return document.addEventListener("keydown",r),()=>{document.removeEventListener("keydown",r)}},[s,t,n,o,i,a])}var q=d("react");function $e(){return typeof window<"u"&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}function Le(e){let[t,n]=(0,q.useState)(null),[o,i]=(0,q.useState)(()=>$e()),s=e==="auto"?$e():e,[a,r]=(0,q.useState)(s);(0,q.useEffect)(()=>{if(typeof window>"u")return;let u=window.matchMedia("(prefers-color-scheme: dark)"),p=l=>{i(l.matches?"dark":"light")};return u.addEventListener("change",p),()=>{u.removeEventListener("change",p)}},[]),(0,q.useEffect)(()=>{let u;t!==null?u=t:e==="auto"?u=o:u=e,r(u)},[t,o,e]),(0,q.useEffect)(()=>{typeof document<"u"&&document.documentElement.setAttribute("data-theme",a)},[a]);let c=(0,q.useCallback)(()=>{n(u=>(u??a)==="light"?"dark":"light")},[a]);return{mode:a,isDark:a==="dark",toggle:c}}var F=d("react");function _e(e){let{schema:t,state:n,enabled:o}=e,i=o?(t.submit?.destinations??[]).find(V=>V.type==="service"):void 0,s=i!==void 0,a=i?.endpoint??"",r=i?.formId??t.id,[c,u]=(0,F.useState)(null),[p,l]=(0,F.useState)(!1),[f,v]=(0,F.useState)(null),g=(0,F.useRef)(null),x=(0,F.useRef)(!1),b=(0,F.useRef)(null),S=(0,F.useRef)(n.currentIndex),C=(0,F.useRef)(!1),B=(0,F.useRef)(n);B.current=n;let H=Object.keys(n.answers).length>0,h=(0,F.useCallback)(async V=>{if(!s||x.current)return;let A=B.current,ne=A.currentIndex<t.fields.length?t.fields[A.currentIndex]:void 0,G={formId:r,status:V,answers:A.answers,metadata:{lastFieldId:ne?.id??null,userAgent:typeof navigator<"u"?navigator.userAgent:""}};try{if(l(!0),g.current)await fetch(`${a}/api/responses/${r}/${g.current}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(G)});else{let J=await fetch(`${a}/api/responses/${r}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(G)});if(J.ok){let z=await J.json();z.responseId&&(g.current=z.responseId,u(z.responseId))}}v(Date.now())}catch(J){console.error("[formant] auto-save error:",J)}finally{l(!1)}},[s,a,r,t.fields]);(0,F.useEffect)(()=>{!s||C.current||!H||(C.current=!0,h("in_progress"))},[s,H,h]),(0,F.useEffect)(()=>{!s||!C.current||n.currentIndex!==S.current&&(S.current=n.currentIndex,h("in_progress"))},[s,n.currentIndex,h]),(0,F.useEffect)(()=>{if(!(!s||!C.current||x.current))return b.current&&clearTimeout(b.current),b.current=setTimeout(()=>{h("in_progress")},3e3),()=>{b.current&&clearTimeout(b.current)}},[s,n.answers,h]),(0,F.useEffect)(()=>{if(!s)return;let V=()=>{if(x.current||!C.current)return;let A=B.current,ne=A.currentIndex<t.fields.length?t.fields[A.currentIndex]:void 0,G=JSON.stringify({formId:r,status:"in_progress",answers:A.answers,metadata:{lastFieldId:ne?.id??null,userAgent:typeof navigator<"u"?navigator.userAgent:""}}),J=g.current?`${a}/api/responses/${r}/${g.current}`:`${a}/api/responses/${r}`;navigator.sendBeacon(J,G)};return window.addEventListener("beforeunload",V),()=>{window.removeEventListener("beforeunload",V)}},[s,a,r,t.fields]);let y=(0,F.useCallback)(()=>{x.current=!0,b.current&&(clearTimeout(b.current),b.current=null)},[]);return s?{responseId:c,saving:p,lastSaved:f,markCompleted:y}:{responseId:null,saving:!1,lastSaved:null,markCompleted:()=>{}}}var ee=d("react/jsx-runtime"),Ae=({field:e,onNext:t})=>{let n=e;return(0,ee.jsxs)("div",{className:"ff-welcome",children:[(0,ee.jsx)("h1",{className:"ff-welcome-title",children:n.title}),n.subtitle&&(0,ee.jsx)("p",{className:"ff-welcome-subtitle",children:n.subtitle}),(0,ee.jsx)("button",{type:"button",className:"ff-welcome-btn",onClick:t,children:n.buttonText||"Start"})]})};var ae=d("react");var De=d("react/jsx-runtime"),k=({message:e})=>e===null?null:(0,De.jsx)("div",{className:"ff-error-message",role:"alert",children:e});var Y=d("react/jsx-runtime"),Et={text:"text",email:"email",phone:"tel",url:"url"},re=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,c=(0,ae.useRef)(null);(0,ae.useEffect)(()=>{c.current?.focus()},[]);let u=l=>{n(l.target.value)},p=l=>{l.key==="Enter"&&(l.preventDefault(),a())};return(0,Y.jsxs)("div",{className:"ff-question",children:[(0,Y.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,Y.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,Y.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,Y.jsx)("input",{ref:c,type:Et[r.type]??"text",className:"ff-input ff-input-underline",value:t??"",onChange:u,onKeyDown:p,placeholder:r.placeholder}),(0,Y.jsx)(k,{message:o})]})};var ce=d("react");var W=d("react/jsx-runtime"),Pe=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,c=(0,ce.useRef)(null);(0,ce.useEffect)(()=>{c.current?.focus()},[]);let u=l=>{let f=l.target.value;if(f==="")n(void 0);else{let v=Number(f);Number.isNaN(v)||n(v)}},p=l=>{l.key==="Enter"&&(l.preventDefault(),a())};return(0,W.jsxs)("div",{className:"ff-question",children:[(0,W.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,W.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,W.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,W.jsx)("input",{ref:c,type:"number",inputMode:"numeric",className:"ff-input ff-input-underline",value:t??"",onChange:u,onKeyDown:p,placeholder:r.placeholder,min:r.min,max:r.max,step:r.step}),(0,W.jsx)(k,{message:o})]})};var ue=d("react");var P=d("react/jsx-runtime"),Me=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,c=(0,ue.useRef)(null);(0,ue.useEffect)(()=>{c.current?.focus()},[]);let u=f=>{n(f.target.value)},p=(t??"").length,l=p>0;return(0,P.jsxs)("div",{className:"ff-question",children:[(0,P.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,P.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,P.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,P.jsx)("textarea",{ref:c,className:"ff-textarea",value:t??"",onChange:u,placeholder:r.placeholder,rows:r.rows??4,maxLength:r.maxLength}),(0,P.jsxs)("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"},children:[l&&(0,P.jsx)("button",{type:"button",className:"ff-textarea-ok",onClick:a,children:"OK \u2713"}),r.maxLength!=null&&(0,P.jsxs)("span",{className:"ff-char-count",children:[p,"/",r.maxLength]})]}),(0,P.jsx)(k,{message:o})]})};var Q=d("react");var T=d("react/jsx-runtime"),fe="ABCDEFGHIJKLMNOPQRSTUVWXYZ",Oe=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,[c,u]=(0,Q.useState)(""),p=(0,Q.useRef)(null),l=(0,Q.useRef)(a);l.current=a,(0,Q.useEffect)(()=>()=>{p.current!==null&&clearTimeout(p.current)},[]);let f=(0,Q.useCallback)(g=>{n(g),p.current!==null&&clearTimeout(p.current),g!=="__other__"&&(p.current=setTimeout(()=>{l.current()},300))},[n]),v=g=>{let x=g.target.value;u(x),n(x)};return(0,Q.useEffect)(()=>{let g=x=>{let b=x.key.toUpperCase(),S=fe.indexOf(b);S!==-1&&(S<r.options.length?f(r.options[S]):r.allowOther&&S===r.options.length&&f("__other__"))};return document.addEventListener("keydown",g),()=>{document.removeEventListener("keydown",g)}},[r.options,r.allowOther,f]),(0,T.jsxs)("div",{className:"ff-question",children:[(0,T.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,T.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,T.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,T.jsxs)("div",{className:"ff-choice-list",children:[r.options.map((g,x)=>{let b=fe[x]??String(x);return(0,T.jsxs)("button",{type:"button",className:`ff-choice-card${t===g?" ff-choice-card--selected":""}`,onClick:()=>f(g),style:{animationDelay:`${x*50}ms`},children:[(0,T.jsx)("span",{className:"ff-choice-key",children:b}),(0,T.jsx)("span",{className:"ff-choice-label",children:g})]},g)}),r.allowOther&&(0,T.jsxs)("div",{children:[(0,T.jsxs)("button",{type:"button",className:`ff-choice-card${t==="__other__"||t!=null&&t!==""&&!r.options.includes(t)?" ff-choice-card--selected":""}`,onClick:()=>f("__other__"),style:{animationDelay:`${r.options.length*50}ms`},children:[(0,T.jsx)("span",{className:"ff-choice-key",children:fe[r.options.length]??"?"}),(0,T.jsx)("span",{className:"ff-choice-label",children:"Other"})]}),(t==="__other__"||t!=null&&t!==""&&!r.options.includes(t))&&(0,T.jsx)("input",{type:"text",className:"ff-choice-other-input",value:c,onChange:v,placeholder:"Type your answer...",autoFocus:!0})]})]}),(0,T.jsx)(k,{message:o})]})};var $=d("react/jsx-runtime"),Tt="ABCDEFGHIJKLMNOPQRSTUVWXYZ",qe=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,c=t??[],u=f=>{c.includes(f)?n(c.filter(v=>v!==f)):n([...c,f])},p=r.required?r.minSelections??1:r.minSelections??0,l=c.length>=p;return(0,$.jsxs)("div",{className:"ff-question",children:[(0,$.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,$.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,$.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,$.jsx)("div",{className:"ff-multi-list",children:r.options.map((f,v)=>{let g=Tt[v]??String(v),x=c.includes(f);return(0,$.jsxs)("button",{type:"button",className:`ff-multi-card${x?" ff-multi-card--selected":""}`,onClick:()=>u(f),style:{animationDelay:`${v*50}ms`},children:[(0,$.jsx)("span",{className:`ff-multi-check${x?" ff-multi-check--checked":""}`}),(0,$.jsx)("span",{className:"ff-choice-key",children:g}),(0,$.jsx)("span",{className:"ff-choice-label",children:f})]},f)})}),l&&(0,$.jsx)("button",{type:"button",className:"ff-multi-continue",onClick:a,children:"Continue"}),(0,$.jsx)(k,{message:o})]})};var Z=d("react");var D=d("react/jsx-runtime"),Qe=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,c=r.max??5,[u,p]=(0,Z.useState)(null),l=(0,Z.useRef)(null),f=(0,Z.useRef)(a);f.current=a,(0,Z.useEffect)(()=>()=>{l.current!==null&&clearTimeout(l.current)},[]);let v=b=>{n(b),l.current!==null&&clearTimeout(l.current),l.current=setTimeout(()=>{f.current()},400)},g=u??t??0,x=Array.from({length:c},(b,S)=>S+1);return(0,D.jsxs)("div",{className:"ff-question",children:[(0,D.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,D.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,D.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,D.jsxs)("div",{className:"ff-rating",children:[(0,D.jsx)("div",{className:"ff-rating-stars",children:x.map(b=>{let S=b<=g,C=u!==null&&b<=u;return(0,D.jsx)("button",{type:"button",className:`ff-star${S?" ff-star--filled":""}${C?" ff-star--hover":""}`,onClick:()=>v(b),onMouseEnter:()=>p(b),onMouseLeave:()=>p(null),"aria-label":`${b} star${b!==1?"s":""}`,children:S?"\u2605":"\u2606"},b)})}),r.labels&&(0,D.jsx)("div",{className:"ff-rating-labels",children:Object.entries(r.labels).map(([b,S])=>(0,D.jsx)("span",{children:S},b))})]}),(0,D.jsx)(k,{message:o})]})};var oe=d("react");var L=d("react/jsx-runtime"),Ue=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,c=(0,oe.useRef)(null),u=(0,oe.useRef)(a);u.current=a,(0,oe.useEffect)(()=>()=>{c.current!==null&&clearTimeout(c.current)},[]);let p=f=>{n(f),c.current!==null&&clearTimeout(c.current),c.current=setTimeout(()=>{u.current()},400)},l=[];for(let f=r.min;f<=r.max;f++)l.push(f);return(0,L.jsxs)("div",{className:"ff-question",children:[(0,L.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,L.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,L.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,L.jsxs)("div",{className:"ff-scale",children:[(0,L.jsx)("div",{className:"ff-scale-buttons",children:l.map(f=>(0,L.jsx)("button",{type:"button",className:`ff-scale-btn${t===f?" ff-scale-btn--selected":""}`,onClick:()=>p(f),children:f},f))}),(r.minLabel||r.maxLabel)&&(0,L.jsxs)("div",{className:"ff-scale-labels",children:[(0,L.jsx)("span",{children:r.minLabel??""}),(0,L.jsx)("span",{children:r.maxLabel??""})]})]}),(0,L.jsx)(k,{message:o})]})};var se=d("react");var I=d("react/jsx-runtime"),He=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,c=(0,se.useRef)(null),u=(0,se.useRef)(a);u.current=a,(0,se.useEffect)(()=>()=>{c.current!==null&&clearTimeout(c.current)},[]);let p=l=>{n(l),c.current!==null&&clearTimeout(c.current),c.current=setTimeout(()=>{u.current()},300)};return(0,I.jsxs)("div",{className:"ff-question",children:[(0,I.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,I.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,I.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,I.jsxs)("div",{className:"ff-yesno",children:[(0,I.jsxs)("button",{type:"button",className:`ff-yesno-card${t===!0?" ff-yesno-card--selected":""}`,onClick:()=>p(!0),children:[(0,I.jsx)("span",{children:r.yesLabel||"Yes"}),(0,I.jsx)("span",{className:"ff-yesno-hint",children:"Y"})]}),(0,I.jsxs)("button",{type:"button",className:`ff-yesno-card${t===!1?" ff-yesno-card--selected":""}`,onClick:()=>p(!1),children:[(0,I.jsx)("span",{children:r.noLabel||"No"}),(0,I.jsx)("span",{className:"ff-yesno-hint",children:"N"})]})]}),(0,I.jsx)(k,{message:o})]})};var le=d("react");var X=d("react/jsx-runtime"),Ke=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s})=>{let a=e,r=(0,le.useRef)(null);(0,le.useEffect)(()=>{r.current?.focus()},[]);let c=u=>{n(u.target.value)};return(0,X.jsxs)("div",{className:"ff-question",children:[(0,X.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,X.jsx)("h2",{className:"ff-question-title",children:a.title}),a.subtitle&&(0,X.jsx)("p",{className:"ff-question-subtitle",children:a.subtitle}),(0,X.jsx)("input",{ref:r,type:"date",className:"ff-input ff-date-input",value:t??"",onChange:c,min:a.minDate,max:a.maxDate}),(0,X.jsx)(k,{message:o})]})};var U=d("react");var N=d("react/jsx-runtime"),Be=({field:e,value:t,onChange:n,error:o,questionNumber:i,totalQuestions:s,onNext:a})=>{let r=e,[c,u]=(0,U.useState)(!1),[p,l]=(0,U.useState)(""),[f,v]=(0,U.useState)(0),g=(0,U.useRef)(null),x=(0,U.useRef)(null),b=r.searchable?r.options.filter(h=>h.toLowerCase().includes(p.toLowerCase())):r.options;(0,U.useEffect)(()=>{c&&r.searchable&&g.current?.focus()},[c,r.searchable]),(0,U.useEffect)(()=>{v(0)},[p]);let S=h=>{n(h),u(!1),l(""),a()},C=()=>{u(h=>!h),c&&l("")},B=h=>{if(h.key==="ArrowDown")h.preventDefault(),v(y=>y<b.length-1?y+1:y);else if(h.key==="ArrowUp")h.preventDefault(),v(y=>y>0?y-1:0);else if(h.key==="Enter"){h.preventDefault();let y=b[f];y&&S(y)}else h.key==="Escape"&&(u(!1),l(""))},H=h=>{if(h.key==="ArrowDown")h.preventDefault(),v(y=>y<b.length-1?y+1:y);else if(h.key==="ArrowUp")h.preventDefault(),v(y=>y>0?y-1:0);else if(h.key==="Enter"){h.preventDefault();let y=b[f];y&&S(y)}else h.key==="Escape"&&u(!1)};return(0,N.jsxs)("div",{className:"ff-question",children:[(0,N.jsxs)("div",{className:"ff-question-number",children:["QUESTION ",i," OF ",s]}),(0,N.jsx)("h2",{className:"ff-question-title",children:r.title}),r.subtitle&&(0,N.jsx)("p",{className:"ff-question-subtitle",children:r.subtitle}),(0,N.jsx)("div",{className:"ff-dropdown",children:r.searchable?(0,N.jsxs)(N.Fragment,{children:[(0,N.jsx)("input",{ref:g,type:"text",className:"ff-dropdown-search",value:p,onChange:h=>{l(h.target.value),u(!0)},onFocus:()=>u(!0),onKeyDown:B,placeholder:t||"Type to search..."}),c&&b.length>0&&(0,N.jsx)("div",{className:"ff-dropdown-list",ref:x,children:b.map((h,y)=>(0,N.jsx)("button",{type:"button",className:`ff-dropdown-option${y===f?" ff-dropdown-option--highlighted":""}`,onClick:()=>S(h),onMouseEnter:()=>v(y),children:h},h))})]}):(0,N.jsxs)(N.Fragment,{children:[(0,N.jsx)("button",{type:"button",className:"ff-dropdown-trigger",onClick:C,children:t||"Select an option..."}),c&&(0,N.jsx)("div",{className:"ff-dropdown-list",ref:x,onKeyDown:H,tabIndex:0,children:b.map((h,y)=>(0,N.jsx)("button",{type:"button",className:`ff-dropdown-option${y===f?" ff-dropdown-option--highlighted":""}`,onClick:()=>S(h),onMouseEnter:()=>v(y),children:h},h))})]})}),(0,N.jsx)(k,{message:o})]})};var te=d("react/jsx-runtime"),Ye=({field:e,onNext:t})=>{let n=e;return(0,te.jsxs)("div",{className:"ff-statement",children:[(0,te.jsx)("h1",{className:"ff-statement-title",children:n.title}),n.subtitle&&(0,te.jsx)("p",{className:"ff-statement-subtitle",children:n.subtitle}),(0,te.jsxs)("button",{type:"button",className:"ff-statement-btn",onClick:t,children:[n.buttonText||"Continue"," \u2192"]})]})};var _=d("react/jsx-runtime");function Ct(e,t){if(t==null||t==="")return"\u2014";switch(e.type){case"rating":{let n=e.max??5,o=Number(t);return"\u2605".repeat(o)+"\u2606".repeat(n-o)}case"scale":return String(t);case"multi_choice":return Array.isArray(t)?t.join(", "):String(t);case"yes_no":return t===!0?"Yes":"No";default:return String(t)}}var We=({field:e,answers:t,fields:n})=>{let o=e,i=n.filter(s=>s.type!=="welcome"&&s.type!=="statement"&&s.type!=="ending"&&t[s.id]!==void 0);return(0,_.jsxs)("div",{className:"ff-ending",children:[(0,_.jsx)("div",{className:"ff-ending-checkmark",children:(0,_.jsx)("div",{className:"ff-ending-circle",children:(0,_.jsx)("div",{className:"ff-ending-check"})})}),(0,_.jsx)("h1",{className:"ff-ending-title",children:o.title}),o.subtitle&&(0,_.jsx)("p",{className:"ff-question-subtitle",children:o.subtitle}),o.showSummary&&i.length>0&&(0,_.jsx)("div",{className:"ff-ending-summary",children:i.map(s=>(0,_.jsxs)("div",{className:"ff-ending-summary-item",children:[(0,_.jsx)("div",{className:"ff-question-number",children:s.title}),(0,_.jsx)("div",{children:Ct(s,t[s.id])})]},s.id))}),o.redirectUrl&&(0,_.jsx)("a",{href:o.redirectUrl,className:"ff-ending-redirect",target:"_blank",rel:"noopener noreferrer",children:o.redirectLabel||"Continue"})]})};var Xe={welcome:Ae,text:re,email:re,phone:re,url:re,number:Pe,textarea:Me,choice:Oe,multi_choice:qe,rating:Qe,scale:Ue,yes_no:He,date:Ke,dropdown:Be,statement:Ye,ending:We};var pe=d("react/jsx-runtime"),Ve=({progress:e})=>(0,pe.jsx)("div",{className:"ff-progress",children:(0,pe.jsx)("div",{className:"ff-progress-bar",style:{width:`${e}%`}})});var Je=d("react/jsx-runtime"),Ge=({mode:e,onToggle:t})=>(0,Je.jsx)("button",{className:"ff-theme-toggle",onClick:t,type:"button","aria-label":`Switch to ${e==="light"?"dark":"light"} mode`,children:e==="dark"?"\u2600":"\u25CF"});var Ze=d("react/jsx-runtime"),je=({phase:e,children:t})=>(0,Ze.jsx)("div",{className:`ff-transition ff-transition-${e}`,children:t});var m=d("react/jsx-runtime"),ze=({field:e})=>{if(!e)return null;let t=It(e);return t.length===0?null:(0,m.jsx)("div",{className:"ff-keyboard-hint",children:t.map((n,o)=>(0,m.jsx)("span",{className:"ff-keyboard-hint-item",children:n},o))})};function It(e){switch(e.type){case"welcome":case"statement":return[(0,m.jsxs)(m.Fragment,{children:["Press ",(0,m.jsx)("kbd",{children:"Enter \u21B5"})]})];case"text":case"email":case"number":case"phone":case"url":case"date":return[(0,m.jsxs)(m.Fragment,{children:["Press ",(0,m.jsx)("kbd",{children:"Enter \u21B5"})]})];case"textarea":return[(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:"Shift + Enter \u21B5"})," to submit"]})];case"choice":return[(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:"A"}),", ",(0,m.jsx)("kbd",{children:"B"}),", ",(0,m.jsx)("kbd",{children:"C"})," ... to select"]}),(0,m.jsx)(m.Fragment,{children:(0,m.jsx)("kbd",{children:"Enter \u21B5"})})];case"multi_choice":return[(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:"A"}),", ",(0,m.jsx)("kbd",{children:"B"}),", ",(0,m.jsx)("kbd",{children:"C"})," ... to toggle"]}),(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:"Enter \u21B5"})," to continue"]})];case"rating":{let t=e.max??5;return[(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:"1"}),"-",(0,m.jsx)("kbd",{children:t})," to rate"]})]}case"scale":{let t=e;return[(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:t.min}),"-",(0,m.jsx)("kbd",{children:t.max})," to select"]})]}case"yes_no":return[(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:"Y"})," / ",(0,m.jsx)("kbd",{children:"N"})]})];case"dropdown":return[(0,m.jsxs)(m.Fragment,{children:[(0,m.jsx)("kbd",{children:"\u2191"})," ",(0,m.jsx)("kbd",{children:"\u2193"})," to navigate"]}),(0,m.jsx)(m.Fragment,{children:(0,m.jsx)("kbd",{children:"Enter \u21B5"})})];case"ending":return[];default:return[]}}async function tt(e,t,n){let o=JSON.stringify($t(n,t));try{let i=await fetch(e,{method:"POST",mode:"cors",headers:{"Content-Type":"text/plain"},body:o});if(!i.ok)throw new Error(`Sheets submission failed: ${i.status} ${i.statusText}`)}catch{await fetch(e,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:o})}}function $t(e,t){let n={};for(let o of e.fields){if(_t(o))continue;let i=o.title||o.id,s=t.answers[o.id];n[i]=Lt(s)}return n._formId=t.formId,n._submittedAt=t.submittedAt,t.metadata?.duration!=null&&(n._duration=t.metadata.duration),t.metadata?.completionRate!=null&&(n._completionRate=t.metadata.completionRate),n}function Lt(e){if(e==null)return"";if(Array.isArray(e))return et(e.map(String).join(", "));if(typeof e=="boolean")return e?"Yes":"No";if(typeof e=="number")return e;if(e instanceof Date)return e.toISOString();let t=String(e);return et(t)}function et(e){return e.length>5e4?e.slice(0,49997)+"...":e}function _t(e){return e.type==="welcome"||e.type==="statement"||e.type==="ending"}async function nt(e,t,n){let o=JSON.stringify(t),i=async()=>{let a=new AbortController,r=setTimeout(()=>a.abort(),1e4);try{return await fetch(e,{method:"POST",headers:{"Content-Type":"application/json",...n},body:o,signal:a.signal})}finally{clearTimeout(r)}},s=await i();if(s.status>=500&&(await At(1e3),s=await i()),!s.ok)throw new Error(`Webhook submission failed: ${s.status} ${s.statusText}`)}function At(e){return new Promise(t=>setTimeout(t,e))}async function rt(e,t,n){let o=`${t}/api/responses/${e}`,i=await fetch(o,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(n)});if(!i.ok)throw new Error(`Service submission failed: ${i.status} ${i.statusText}`)}function st(e,t,n){if(typeof XLSX>"u"){Dt(e,t,n);return}let o=`${e.title??"formant"}-responses.xlsx`,i=n??o,s=it(e,t),a=XLSX.utils.json_to_sheet([s]),r=XLSX.utils.json_to_sheet([{"Submission Timestamp":t.submittedAt,Duration:t.metadata?.duration??"","Completion Rate":t.metadata?.completionRate??""}]),c=XLSX.utils.book_new();XLSX.utils.book_append_sheet(c,a,"Responses"),XLSX.utils.book_append_sheet(c,r,"Metadata");let u=XLSX.write(c,{bookType:"xlsx",type:"array"});at(new Blob([u],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),i)}function Dt(e,t,n){let o=`${e.title??"formant"}-responses.csv`,i=n?n.replace(/\.xlsx$/i,".csv"):o,s=it(e,t),a=Object.keys(s),r=Object.values(s),u=[a.map(ot).join(","),r.map(p=>ot(String(p??""))).join(",")].join(`
+`);at(new Blob([u],{type:"text/csv;charset=utf-8;"}),i)}function it(e,t){let n={};for(let o of e.fields){let i=o.title??o.id,s=t.answers[o.id];Array.isArray(s)?n[i]=s.join(", "):s instanceof Date?n[i]=s.toISOString():n[i]=s}return n}function ot(e){return e.includes(",")||e.includes('"')||e.includes(`
+`)?`"${e.replace(/"/g,'""')}"`:e}function at(e,t){let n=URL.createObjectURL(e),o=document.createElement("a");o.href=n,o.download=t,document.body.appendChild(o),o.click(),document.body.removeChild(o),URL.revokeObjectURL(n)}async function ct(e,t,n){let o=e.submit?.destinations??[];if(o.length===0)return[];let i={formId:e.id,status:"completed",submittedAt:new Date().toISOString(),answers:t,metadata:n};return(await Promise.allSettled(o.map(async a=>{switch(a.type){case"sheets":return await tt(a.url,i,e),{destination:"sheets",success:!0};case"webhook":return await nt(a.url,i,a.headers),{destination:"webhook",success:!0};case"service":{let r=a.endpoint??"";return await rt(a.formId,r,i),{destination:"service",success:!0}}case"excel":return st(e,i,a.filename),{destination:"excel",success:!0};default:return{destination:"unknown",success:!1,error:"Unknown destination type"}}}))).map((a,r)=>a.status==="fulfilled"?a.value:{destination:o[r]?.type??"unknown",success:!1,error:a.reason instanceof Error?a.reason.message:String(a.reason)})}var M=d("react/jsx-runtime"),ut=new Set(["welcome","statement","ending"]),lt=({schema:e})=>{let{currentField:t,currentIndex:n,answers:o,progress:i,complete:s,error:a,goNext:r,goBack:c,setAnswer:u,setError:p,state:l}=Te(e),{mode:f,toggle:v}=Le(e.theme?.defaultMode??"auto"),[g,x]=(0,E.useState)("active"),[b,S]=(0,E.useState)(null),[C,B]=(0,E.useState)(!1),[H,h]=(0,E.useState)(!1),[y,V]=(0,E.useState)(!1),A=(0,E.useRef)(null),ne=(e.submit?.destinations??[]).some(w=>w.type==="service"),G=_e({schema:e,state:l,enabled:ne}),z=e.fields.filter(w=>!ut.has(w.type)).length,ge=(w=>{let R=0;for(let K=0;K<=w;K++){let O=e.fields[K];O&&!ut.has(O.type)&&R++}return R})(n),he=(0,E.useCallback)(async()=>{if(!(H||C)){B(!0);try{let w={userAgent:typeof navigator<"u"?navigator.userAgent:"",duration:Math.round((Date.now()-l.startedAt)/1e3),completionRate:i},R=await ct(e,o,w);S(R),h(!0),G.markCompleted()}catch(w){console.error("[formant] submit error:",w),S([{destination:"unknown",success:!1,error:w instanceof Error?w.message:String(w)}])}finally{B(!1)}}},[H,C,l.startedAt,i,e,o,G]),ie=(0,E.useCallback)(w=>{A.current&&clearTimeout(A.current),x("exiting"),A.current=setTimeout(()=>{w(),x("entering"),A.current=setTimeout(()=>{x("active")},50)},350)},[]),qt=(0,E.useCallback)(()=>{g!=="active"||r()},[g,r]),de=(0,E.useCallback)(()=>{g!=="active"||!t||ie(()=>{r()||x("active")})},[g,t,ie,r]),be=(0,E.useCallback)(()=>{g==="active"&&l.history.length!==0&&ie(()=>{c()})},[g,l.history.length,ie,c]),ye=(0,E.useRef)(null);E.default.useEffect(()=>{s&&!H&&!C&&ye.current!==n&&(ye.current=n,he())},[s,H,C,n,he]);let pt=(0,E.useCallback)(w=>{if(!(!t||g!=="active"))switch(t.type){case"choice":{let R=w.charCodeAt(0)-65,K=t.options;if(R>=0&&R<K.length){let O=K[R];O!==void 0&&u(t.id,O)}break}case"multi_choice":{let R=w.charCodeAt(0)-65,K=t.options;if(R>=0&&R<K.length){let O=K[R];if(O!==void 0){let me=o[t.id]??[],ht=me.includes(O)?me.filter(bt=>bt!==O):[...me,O];u(t.id,ht)}}break}case"yes_no":{u(t.id,w==="Y");break}case"rating":{let R=parseInt(w,10);R>=1&&u(t.id,R);break}case"scale":{let R=parseInt(w,10);u(t.id,R);break}default:break}},[t,g,o,u]);if(Ie({onNext:de,onBack:be,onSelect:pt,currentField:t,phase:g,inputFocused:y}),!t)return null;let ve=Xe[t.type];if(!ve)return null;let gt=t.type==="ending"?{field:t,value:void 0,onChange:()=>{},error:null,questionNumber:ge,totalQuestions:z,onNext:de,answers:o,fields:e.fields}:{field:t,value:o[t.id],onChange:w=>{u(t.id,w),p(null)},error:a,questionNumber:ge,totalQuestions:z,onNext:de};return(0,M.jsxs)("div",{className:"ff-root","data-theme":f,children:[(0,M.jsx)(Ve,{progress:i}),(0,M.jsx)(Ge,{mode:f,onToggle:v}),l.history.length>0&&g==="active"&&(0,M.jsx)("button",{type:"button",className:"ff-back-btn",onClick:be,"aria-label":"Go back",children:"\u2190"}),(0,M.jsx)("div",{className:"ff-question-container",children:(0,M.jsx)(je,{phase:g,children:(0,M.jsx)(ve,{...gt})})}),C&&(0,M.jsx)("div",{className:"ff-submit-status","aria-live":"polite",children:"Submitting..."}),(0,M.jsx)(ze,{field:t})]})};var ft=d("react"),Pt=window.ReactDOM,Mt=window.__FORMANT_SCHEMA__,dt=document.getElementById("root");dt&&(mt=Pt.createRoot(dt),mt.render((0,ft.createElement)(lt,{schema:Mt})));var mt;})();
+
+  </script>
+</body>
+</html>

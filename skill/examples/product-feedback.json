@@ -1,0 +1,96 @@
+{
+  "id": "product-feedback",
+  "title": "Product Feedback",
+  "fields": [
+    {
+      "id": "welcome",
+      "type": "welcome",
+      "title": "We'd love your feedback",
+      "subtitle": "Takes about 2 minutes. Your responses help us improve.",
+      "buttonText": "Get Started"
+    },
+    {
+      "id": "name",
+      "type": "text",
+      "title": "What's your name?",
+      "placeholder": "Type your name...",
+      "required": true
+    },
+    {
+      "id": "email",
+      "type": "email",
+      "title": "What's your email?",
+      "subtitle": "We'll only use this to follow up if needed.",
+      "placeholder": "you@example.com",
+      "required": true
+    },
+    {
+      "id": "role",
+      "type": "choice",
+      "title": "What best describes your role?",
+      "options": ["Developer", "Designer", "Product Manager", "Executive", "Other"],
+      "allowOther": true
+    },
+    {
+      "id": "satisfaction",
+      "type": "rating",
+      "title": "How satisfied are you with the product?",
+      "required": true,
+      "max": 5,
+      "labels": { "1": "Very poor", "3": "Okay", "5": "Excellent" }
+    },
+    {
+      "id": "recommend",
+      "type": "scale",
+      "title": "How likely are you to recommend us?",
+      "min": 0,
+      "max": 10,
+      "minLabel": "Not at all likely",
+      "maxLabel": "Extremely likely"
+    },
+    {
+      "id": "favorite-feature",
+      "type": "choice",
+      "title": "What's your favorite feature?",
+      "options": ["Speed", "Design", "Reliability", "Integrations", "Support"],
+      "next": {
+        "Support": "support-detail",
+        "default": "improvements"
+      }
+    },
+    {
+      "id": "support-detail",
+      "type": "textarea",
+      "title": "Tell us about your support experience",
+      "subtitle": "What went well? What could be better?",
+      "placeholder": "Share your experience...",
+      "next": "improvements"
+    },
+    {
+      "id": "improvements",
+      "type": "textarea",
+      "title": "What would you most like us to improve?",
+      "placeholder": "Your suggestions..."
+    },
+    {
+      "id": "use-again",
+      "type": "yes_no",
+      "title": "Would you use this product again?"
+    },
+    {
+      "id": "end",
+      "type": "ending",
+      "title": "Thank you!",
+      "subtitle": "Your feedback is incredibly valuable to us.",
+      "showSummary": true
+    }
+  ],
+  "submit": {
+    "destinations": [
+      { "type": "excel", "filename": "product-feedback" }
+    ]
+  },
+  "theme": {
+    "accent": "#6c5ce7"
+  }
+}

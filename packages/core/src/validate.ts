@@ -156,10 +156,10 @@ export function validateField(field: Field, value: unknown): string | null {
     case "yes_no": {
       const yesLabel = field.yesLabel ?? "Yes";
       const noLabel = field.noLabel ?? "No";
-      if (value !== yesLabel && value !== noLabel) {
-        return `${field.title} must be "${yesLabel}" or "${noLabel}"`;
-      }
-      return null;
+      // Accept booleans (true = yes, false = no) as well as string labels
+      if (value === true || value === yesLabel) return null;
+      if (value === false || value === noLabel) return null;
+      return `${field.title} must be "${yesLabel}" or "${noLabel}"`;
     }
 
     case "date": {

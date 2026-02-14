@@ -28,7 +28,15 @@ async function waitForKeyboardReady(page: Page) {
  * re-register keyboard handlers, then pressing Enter.
  */
 async function selectChoice(page: Page, optionText: string) {
-  await page.locator(".ff-choice-card", { hasText: optionText }).click();
+  // Use exact label match to avoid substring collisions (e.g. "Unsatisfied" vs "Very unsatisfied")
+  await page
+    .locator(".ff-choice-card")
+    .filter({
+      has: page.locator(".ff-choice-label", {
+        hasText: new RegExp(`^${optionText}$`),
+      }),
+    })
+    .click();
   // Wait long enough for React to re-render AND re-register keyboard handlers
   // (React uses MessageChannel for scheduling, not just microtasks)
   await page.waitForTimeout(200);

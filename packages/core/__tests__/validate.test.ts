@@ -503,8 +503,12 @@ describe("validateField", () => {
       expect(validateField(field, "Maybe")).not.toBeNull();
     });
 
-    it("fails for boolean", () => {
-      expect(validateField(field, true)).not.toBeNull();
+    it("passes for boolean true (= yes)", () => {
+      expect(validateField(field, true)).toBeNull();
+    });
+
+    it("passes for boolean false (= no)", () => {
+      expect(validateField(field, false)).toBeNull();
     });
 
     describe("custom labels", () => {
