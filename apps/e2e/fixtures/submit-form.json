@@ -1,0 +1,33 @@
+{
+  "id": "submit-test",
+  "title": "Submit Test Form",
+  "fields": [
+    {
+      "id": "welcome",
+      "type": "welcome",
+      "title": "Submit Test",
+      "subtitle": "Testing multi-destination submit",
+      "buttonText": "Start"
+    },
+    {
+      "id": "name",
+      "type": "text",
+      "title": "Your name",
+      "required": true,
+      "placeholder": "Type your name..."
+    },
+    {
+      "id": "end",
+      "type": "ending",
+      "title": "All done!",
+      "subtitle": "Thank you for testing."
+    }
+  ],
+  "submit": {
+    "destinations": [
+      { "type": "webhook", "url": "https://hook.example.com/submit" },
+      { "type": "service", "formId": "submit-test", "endpoint": "https://api.example.com" },
+      { "type": "excel", "filename": "submit-test-responses" }
+    ]
+  }
+}

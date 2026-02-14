@@ -11,6 +11,7 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import { TransitionWrapper } from "./components/TransitionWrapper";
 import { KeyboardHint } from "./components/KeyboardHint";
 import { submitResponses, type SubmitResult } from "./submit/handler";
+import { downloadExcel, downloadCSV } from "./submit/excel";
 
 /** Field types that are not answerable questions. */
 const NON_ANSWERABLE = new Set(["welcome", "statement", "ending"]);
@@ -283,6 +284,24 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
     return null;
   }
 
+  // ─── Excel download fallback ───
+
+  const handleDownloadExcel = useCallback((): void => {
+    const response = {
+      formId: schema.id,
+      status: "completed" as const,
+      submittedAt: new Date().toISOString(),
+      answers,
+      metadata: {
+        userAgent:
+          typeof navigator !== "undefined" ? navigator.userAgent : "",
+        duration: Math.round((Date.now() - state.startedAt) / 1000),
+        completionRate: progress,
+      },
+    };
+    downloadExcel(schema, response, schema.title ? `${schema.title}-responses` : undefined);
+  }, [schema, answers, state.startedAt, progress]);
+
   // Build props based on field type
   const isEnding = currentField.type === "ending";
 
@@ -297,6 +316,9 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
         onNext: handleGoNext,
         answers,
         fields: schema.fields,
+        submitResults,
+        submitting,
+        onDownloadExcel: handleDownloadExcel,
       } satisfies EndingComponentProps)
     : {
         field: currentField,
@@ -330,11 +352,6 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
           <QuestionComponent {...questionProps} />
         </TransitionWrapper>
       </div>
-      {submitting && (
-        <div className="ff-submit-status" aria-live="polite">
-          Submitting...
-        </div>
-      )}
       <KeyboardHint field={currentField} />
     </div>
   );

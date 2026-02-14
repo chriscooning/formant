@@ -242,7 +242,13 @@ The `"default"` key is the fallback if the answer doesn't match any key. If `nex
 
 ### Submit Destinations
 
-Configure where form responses are sent. Multiple destinations fire in parallel.
+Configure where form responses are sent. **Multiple destinations fire in parallel** using `Promise.allSettled` — one destination failing does not block others. The ending screen shows status feedback:
+
+- **All succeed:** Green "Responses submitted successfully" message
+- **Some fail:** Warning "Some destinations were unreachable" with details
+- **All fail:** Error state with "Download Responses" as a prominent fallback
+
+A **"Download Responses"** button is always visible on the ending screen regardless of success/failure.
 
 ```json
 "submit": {
@@ -259,10 +265,29 @@ Configure where form responses are sent. Multiple destinations fire in parallel.
 |-----------|-----------------|-------------|
 | `excel`   | —               | Client-side XLSX download. `filename` is optional. |
 | `sheets`  | `url`           | POST to a Google Apps Script web app URL |
-| `webhook` | `url`           | POST JSON to any URL. Optional `headers`. |
-| `service` | `formId`        | POST to the Formant hosting service |
+| `webhook` | `url`           | POST JSON to any URL. Optional `headers`. Retries once on 5xx with 1s delay. 10s timeout. |
+| `service` | `formId`        | POST to the Formant hosting service. Optional `endpoint` for custom deployments. |
 
 **Default recommendation:** Always include `{ "type": "excel" }` as a fallback so the user can always download their responses even if other destinations fail.
+
+#### Webhook Details
+
+The `webhook` destination sends a `POST` request with the full `FormResponse` JSON:
+
+```json
+{
+  "formId": "my-form",
+  "status": "completed",
+  "submittedAt": "2026-02-14T12:00:00.000Z",
+  "answers": { "name": "Alice", "rating": 5 },
+  "metadata": { "userAgent": "...", "duration": 120, "completionRate": 100 }
+}
+```
+
+- **Custom headers:** Use `headers` to add authentication tokens, API keys, or any custom headers
+- **Retry:** Automatically retries once with a 1-second delay on 5xx server errors
+- **Timeout:** 10-second fetch timeout per attempt
+- **Use cases:** Zapier, Make.com, Slack incoming webhooks, custom APIs, n8n, Pipedream
 
 ---
 
@@ -297,10 +322,15 @@ Before generating, make sure you understand:
 1. **Purpose** — What is this form for? (feedback, survey, registration, quiz, etc.)
 2. **Fields** — What information to collect? What question types fit best?
 3. **Logic** — Any conditional branching? ("If they answer X, ask Y")
-4. **Destination** — Where should responses go? (Excel download, Google Sheets, webhook)
+4. **Destinations** — Where should responses go? Ask: *"Where should responses be sent?"*
+   - **Excel download** (always include as fallback) — works offline, no setup
+   - **Google Sheets** — requires a deployed Apps Script URL (see SETUP.md)
+   - **Webhook** — any URL that accepts POST JSON. Supports custom headers for auth. Great for Zapier, Slack, Make.com, n8n, or custom APIs.
+   - **Formant service** — hosted collection with export. Requires API key + deployment.
+   - Users can pick **multiple destinations** — all fire in parallel.
 5. **Tone** — Formal or casual? This affects title/subtitle wording.
 
-If the user gives a vague request like "make me a feedback form", use sensible defaults and explain your choices.
+If the user gives a vague request like "make me a feedback form", use sensible defaults (at minimum `excel`) and explain your choices.
 
 ### Step 2 — Design the Schema
 
@@ -520,6 +550,30 @@ This form:
   "submit": { "destinations": [{ "type": "excel", "filename": "event-registrations" }] }
 }
 ```
+
+### Multi-Destination Feedback with Webhook + Sheets
+
+```json
+{
+  "id": "multi-dest-feedback",
+  "title": "Customer Feedback",
+  "fields": [
+    { "id": "welcome", "type": "welcome", "title": "Quick feedback?", "buttonText": "Sure" },
+    { "id": "satisfaction", "type": "rating", "title": "How satisfied are you?", "max": 5, "required": true },
+    { "id": "comment", "type": "textarea", "title": "Anything you'd like to share?", "placeholder": "Optional..." },
+    { "id": "end", "type": "ending", "title": "Thank you!", "subtitle": "Your feedback has been recorded." }
+  ],
+  "submit": {
+    "destinations": [
+      { "type": "sheets", "url": "https://script.google.com/macros/s/.../exec" },
+      { "type": "webhook", "url": "https://hooks.zapier.com/hooks/catch/123/abc/", "headers": { "X-Source": "formant" } },
+      { "type": "excel", "filename": "customer-feedback" }
+    ]
+  }
+}
+```
+
+This form sends responses to Google Sheets and Zapier simultaneously, with Excel download as a fallback. If Zapier is down, Sheets still receives the data (and vice versa).
 
 ---
 

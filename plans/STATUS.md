@@ -18,7 +18,7 @@ Track which phases are complete. Each agent session should read this first and u
 | 2 | Google Sheets Connector | **complete** | Apps Script + SETUP.md, hardened sheets.ts (field titles, arrays, truncation, booleans), skill updated, 23 submit tests pass, tsc clean |
 | 3A | Service Database & Middleware | **complete** | 18 tests pass, tsc clean, D1 schema + queries + CORS + auth middleware + Hono skeleton |
 | 3B | Service API Routes & Tests | **complete** | 35 new tests (53 total service), tsc clean, all 6 endpoints, XLSX export, skill deployment docs |
-| 4 | Multi-Destination & Webhooks | not started | Depends on 1E-2 + 3B |
+| 4 | Multi-Destination & Webhooks | **complete** | 8 E2E submit tests + 6 webhook unit tests, tsc clean, 28/28 E2E pass, 186 unit tests pass |
 
 ## Execution Order
 

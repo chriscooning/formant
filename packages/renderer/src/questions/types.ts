@@ -1,4 +1,5 @@
 import type { Field } from "@formant/core";
+import type { SubmitResult } from "../submit/handler";
 
 export interface QuestionProps<T = unknown> {
   field: Field;
@@ -13,4 +14,7 @@ export interface QuestionProps<T = unknown> {
 export interface EndingProps extends QuestionProps<undefined> {
   answers: Record<string, unknown>;
   fields: Field[];
+  submitResults?: SubmitResult[] | null;
+  submitting?: boolean;
+  onDownloadExcel?: () => void;
 }

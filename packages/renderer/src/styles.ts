@@ -513,6 +513,116 @@ html, body {
   border-bottom: 1px solid var(--ff-border);
 }
 
+.ff-ending-redirect {
+  display: inline-block;
+  margin-top: 16px;
+  color: var(--ff-accent);
+  text-decoration: none;
+  font-family: var(--ff-font-sans);
+  font-size: 15px;
+  transition: color var(--ff-transition);
+}
+
+.ff-ending-redirect:hover {
+  color: var(--ff-accent-hover);
+  text-decoration: underline;
+}
+
+/* Error circle (cross mark) */
+.ff-ending-circle--error {
+  border-color: var(--ff-error);
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.ff-ending-cross {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  animation: ff-check-draw 0.2s ease 0.3s forwards;
+  opacity: 0;
+}
+
+.ff-ending-cross::before,
+.ff-ending-cross::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 2px;
+  background: var(--ff-error);
+  border-radius: 1px;
+}
+
+.ff-ending-cross::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ff-ending-cross::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Submit status messages */
+.ff-submit-status {
+  margin-top: 16px;
+  font-family: var(--ff-font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ff-submit-status--pending {
+  color: var(--ff-text-muted);
+}
+
+.ff-submit-status--success {
+  color: var(--ff-success);
+}
+
+.ff-submit-status--warning {
+  color: var(--ff-text-secondary);
+}
+
+.ff-submit-status--error {
+  color: var(--ff-error);
+}
+
+.ff-submit-details {
+  margin-top: 6px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--ff-text-muted);
+  text-align: center;
+}
+
+.ff-submit-detail-item {
+  padding: 2px 0;
+}
+
+/* Spinner for submitting state */
+.ff-submit-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ff-border);
+  border-top-color: var(--ff-accent);
+  border-radius: 50%;
+  animation: ff-spin 0.6s linear infinite;
+}
+
+@keyframes ff-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Download button on ending screen */
+.ff-ending-download {
+  margin-top: 20px;
+}
+
 /* 22. Responsive */
 @media (max-width: 640px) {
   #root { padding: 24px 16px; }

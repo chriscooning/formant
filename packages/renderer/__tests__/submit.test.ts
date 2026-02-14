@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { submitResponses } from "../src/submit/handler";
+import { submitToWebhook } from "../src/submit/webhook";
 import { flattenForSheets } from "../src/submit/sheets";
 import type { FormSchema, FormResponse } from "@formant/core";
 
@@ -305,6 +306,111 @@ describe("submitResponses", () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
     const [, opts2] = mockFetch.mock.calls[1] as [string, RequestInit];
     expect(opts2.mode).toBe("no-cors");
+  });
+});
+
+// ─── Webhook Handler Tests ───
+
+describe("submitToWebhook", () => {
+  const response: FormResponse = {
+    formId: "test-form",
+    status: "completed",
+    submittedAt: "2026-02-14T12:00:00.000Z",
+    answers: { name: "Alice" },
+  };
+
+  it("sends POST with JSON body and custom headers", async () => {
+    mockFetch.mockResolvedValue(
+      new Response("{}", { status: 200 })
+    );
+
+    await submitToWebhook(
+      "https://hooks.example.com/abc",
+      response,
+      { Authorization: "Bearer test-token", "X-Custom": "value" }
+    );
+
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://hooks.example.com/abc");
+    expect(opts.method).toBe("POST");
+
+    const headers = opts.headers as Record<string, string>;
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers["Authorization"]).toBe("Bearer test-token");
+    expect(headers["X-Custom"]).toBe("value");
+
+    const body = JSON.parse(opts.body as string);
+    expect(body.formId).toBe("test-form");
+    expect(body.answers).toEqual({ name: "Alice" });
+  });
+
+  it("retries once on 5xx error", async () => {
+    // First attempt: 500, second attempt: 200
+    mockFetch
+      .mockResolvedValueOnce(new Response("Server Error", { status: 500 }))
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }));
+
+    await submitToWebhook("https://hooks.example.com/abc", response);
+
+    // fetch called twice: initial + 1 retry
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws after retry still fails", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response("Server Error", { status: 500 }))
+      .mockResolvedValueOnce(new Response("Still Broken", { status: 503 }));
+
+    await expect(
+      submitToWebhook("https://hooks.example.com/abc", response)
+    ).rejects.toThrow("Webhook submission failed: 503");
+  });
+
+  it("does not retry on 4xx error", async () => {
+    mockFetch.mockResolvedValue(
+      new Response("Bad Request", { status: 400, statusText: "Bad Request" })
+    );
+
+    await expect(
+      submitToWebhook("https://hooks.example.com/abc", response)
+    ).rejects.toThrow("Webhook submission failed: 400 Bad Request");
+
+    // Only 1 call — no retry for client errors
+    expect(mockFetch).toHaveBeenCalledOnce();
+  });
+
+  it("times out after 10 seconds", async () => {
+    vi.useFakeTimers();
+
+    // fetch never resolves
+    mockFetch.mockImplementation(
+      (_url: string, opts: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          opts.signal?.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted.", "AbortError"));
+          });
+        })
+    );
+
+    const promise = submitToWebhook("https://hooks.example.com/abc", response);
+
+    // Advance past the timeout
+    vi.advanceTimersByTime(10_001);
+
+    await expect(promise).rejects.toThrow();
+
+    vi.useRealTimers();
+  });
+
+  it("succeeds on first attempt with 2xx response", async () => {
+    mockFetch.mockResolvedValue(
+      new Response("{}", { status: 201 })
+    );
+
+    await submitToWebhook("https://hooks.example.com/abc", response);
+
+    expect(mockFetch).toHaveBeenCalledOnce();
   });
 });
 
