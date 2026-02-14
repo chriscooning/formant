@@ -7,3 +7,6 @@ dist/
 apps/e2e/generated/
 apps/e2e/playwright-report/
 apps/e2e/test-results/
+
+# Built forms (regenerable from JSON schemas)
+forms/*.html
