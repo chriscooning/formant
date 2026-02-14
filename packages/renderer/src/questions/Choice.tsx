@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ChoiceField } from "@formant/core";
 import { ErrorMessage } from "../components/ErrorMessage";
 import type { QuestionProps } from "./types";
@@ -17,6 +17,8 @@ export const Choice: React.FC<QuestionProps<string>> = ({
   const choiceField = field as ChoiceField;
   const [otherText, setOtherText] = useState("");
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
 
   // Auto-advance after 300ms on selection
   useEffect(() => {
@@ -27,7 +29,7 @@ export const Choice: React.FC<QuestionProps<string>> = ({
     };
   }, []);
 
-  const handleSelect = (option: string): void => {
+  const handleSelect = useCallback((option: string): void => {
     onChange(option);
 
     // Clear any existing timer
@@ -38,10 +40,10 @@ export const Choice: React.FC<QuestionProps<string>> = ({
     // Don't auto-advance if "Other" is selected — user needs to type
     if (option !== "__other__") {
       autoAdvanceTimer.current = setTimeout(() => {
-        onNext();
+        onNextRef.current();
       }, 300);
     }
-  };
+  }, [onChange]);
 
   const handleOtherChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const text = e.target.value;
@@ -67,8 +69,7 @@ export const Choice: React.FC<QuestionProps<string>> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [choiceField.options, choiceField.allowOther]);
+  }, [choiceField.options, choiceField.allowOther, handleSelect]);
 
   return (
     <div className="ff-question">

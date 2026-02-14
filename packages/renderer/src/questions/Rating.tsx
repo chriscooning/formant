@@ -16,6 +16,8 @@ export const Rating: React.FC<QuestionProps<number | undefined>> = ({
   const max = ratingField.max ?? 5;
   const [hoverValue, setHoverValue] = useState<number | null>(null);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
 
   useEffect(() => {
     return () => {
@@ -32,7 +34,7 @@ export const Rating: React.FC<QuestionProps<number | undefined>> = ({
       clearTimeout(autoAdvanceTimer.current);
     }
     autoAdvanceTimer.current = setTimeout(() => {
-      onNext();
+      onNextRef.current();
     }, 400);
   };
 

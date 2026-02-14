@@ -14,6 +14,8 @@ export const YesNo: React.FC<QuestionProps<boolean | undefined>> = ({
 }) => {
   const yesNoField = field as YesNoField;
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
 
   useEffect(() => {
     return () => {
@@ -30,7 +32,7 @@ export const YesNo: React.FC<QuestionProps<boolean | undefined>> = ({
       clearTimeout(autoAdvanceTimer.current);
     }
     autoAdvanceTimer.current = setTimeout(() => {
-      onNext();
+      onNextRef.current();
     }, 300);
   };
 

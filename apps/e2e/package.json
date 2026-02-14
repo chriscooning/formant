@@ -2,13 +2,14 @@
   "name": "e2e",
   "private": true,
   "scripts": {
-    "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test": "NODE_OPTIONS='--import tsx' playwright test",
+    "test:ui": "NODE_OPTIONS='--import tsx' playwright test --ui"
   },
   "devDependencies": {
-    "@playwright/test": "latest",
-    "@formant/html-builder": "workspace:*",
     "@formant/core": "workspace:*",
+    "@formant/html-builder": "workspace:*",
+    "@playwright/test": "latest",
+    "tsx": "^4.21.0",
     "typescript": "^5.7"
   }
 }

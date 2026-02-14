@@ -14,6 +14,8 @@ export const Scale: React.FC<QuestionProps<number | undefined>> = ({
 }) => {
   const scaleField = field as ScaleField;
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
 
   useEffect(() => {
     return () => {
@@ -30,7 +32,7 @@ export const Scale: React.FC<QuestionProps<number | undefined>> = ({
       clearTimeout(autoAdvanceTimer.current);
     }
     autoAdvanceTimer.current = setTimeout(() => {
-      onNext();
+      onNextRef.current();
     }, 400);
   };
 

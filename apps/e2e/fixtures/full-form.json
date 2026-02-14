@@ -1,1 +1,25 @@
-{}
+{
+  "id": "full",
+  "title": "All Question Types",
+  "fields": [
+    { "id": "welcome", "type": "welcome", "title": "Complete Form Demo", "buttonText": "Begin" },
+    { "id": "name", "type": "text", "title": "Your name?", "required": true },
+    { "id": "email", "type": "email", "title": "Your email?", "required": true },
+    { "id": "age", "type": "number", "title": "Your age?", "min": 0, "max": 150 },
+    { "id": "phone", "type": "phone", "title": "Phone number?" },
+    { "id": "website", "type": "url", "title": "Your website?" },
+    { "id": "bio", "type": "textarea", "title": "Tell us about yourself", "maxLength": 500 },
+    { "id": "role", "type": "choice", "title": "Your role?", "options": ["Developer", "Designer", "PM", "Other"], "allowOther": true },
+    { "id": "skills", "type": "multi_choice", "title": "Your skills?", "options": ["JavaScript", "TypeScript", "Python", "Go", "Rust"], "minSelections": 1 },
+    { "id": "rating", "type": "rating", "title": "Rate our service", "max": 5, "labels": { "1": "Poor", "5": "Excellent" } },
+    { "id": "nps", "type": "scale", "title": "How likely to recommend?", "min": 0, "max": 10, "minLabel": "Not likely", "maxLabel": "Very likely" },
+    { "id": "recommend", "type": "yes_no", "title": "Would you use again?" },
+    { "id": "start-date", "type": "date", "title": "When did you start?" },
+    { "id": "department", "type": "dropdown", "title": "Your department?", "options": ["Engineering", "Design", "Marketing", "Sales", "Support"], "searchable": true },
+    { "id": "note", "type": "statement", "title": "Almost done!", "subtitle": "Just one more question.", "buttonText": "Continue" },
+    { "id": "end", "type": "ending", "title": "All done!", "showSummary": true }
+  ],
+  "submit": {
+    "destinations": [{ "type": "excel", "filename": "full-form-responses" }]
+  }
+}

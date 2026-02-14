@@ -1,1 +1,46 @@
-{}
+{
+  "id": "branching",
+  "title": "Branching Form",
+  "fields": [
+    {
+      "id": "welcome",
+      "type": "welcome",
+      "title": "Product Feedback",
+      "buttonText": "Start"
+    },
+    {
+      "id": "satisfaction",
+      "type": "choice",
+      "title": "How satisfied are you?",
+      "required": true,
+      "options": ["Very satisfied", "Satisfied", "Unsatisfied", "Very unsatisfied"],
+      "next": {
+        "Very satisfied": "positive-detail",
+        "Satisfied": "positive-detail",
+        "Unsatisfied": "negative-detail",
+        "Very unsatisfied": "negative-detail"
+      }
+    },
+    {
+      "id": "positive-detail",
+      "type": "text",
+      "title": "What did you like most?",
+      "next": "end"
+    },
+    {
+      "id": "negative-detail",
+      "type": "text",
+      "title": "What could we improve?",
+      "next": "end"
+    },
+    {
+      "id": "end",
+      "type": "ending",
+      "title": "Thanks for your feedback!",
+      "showSummary": true
+    }
+  ],
+  "submit": {
+    "destinations": [{ "type": "excel" }]
+  }
+}

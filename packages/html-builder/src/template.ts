@@ -5,9 +5,9 @@ const require = createRequire(import.meta.url);
 
 // ─── CDN URLs ───
 
-const REACT_CDN = "https://unpkg.com/react@19/umd/react.production.min.js";
+const REACT_CDN = "https://unpkg.com/react@18/umd/react.production.min.js";
 const REACT_DOM_CDN =
-  "https://unpkg.com/react-dom@19/umd/react-dom.production.min.js";
+  "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js";
 const SHEETJS_CDN =
   "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
 
