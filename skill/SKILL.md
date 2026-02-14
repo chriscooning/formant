@@ -523,6 +523,87 @@ This form:
 
 ---
 
+## Deploying to the Formant Service
+
+After generating a form, you can offer to deploy it to a live URL using the Formant hosting service.
+
+### How Deployment Works
+
+1. The user provides an **API key** (any string — recommend a UUID v4). This key is used to manage the form and access responses.
+2. You generate the HTML using `buildFormHTML(schema)`.
+3. POST the HTML and schema to the Formant service API.
+4. The service returns a **live URL** where the form is publicly accessible.
+5. Responses submitted through the form are automatically collected by the service.
+
+### Deployment Flow
+
+```
+After generating a form, ask the user:
+
+"Would you like me to deploy this to a live URL?
+You'll need an API key — any secret string will do (I recommend a UUID like `a1b2c3d4-e5f6-7890-abcd-ef1234567890`)."
+```
+
+Once the user provides their API key and the Formant service endpoint:
+
+```ts
+import { buildFormHTML } from "@formant/html-builder";
+
+// 1. Build the HTML
+const html = buildFormHTML(schema);
+
+// 2. Deploy to the service
+const response = await fetch("https://<formant-service-url>/api/forms", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer <user-api-key>"
+  },
+  body: JSON.stringify({ html, schema })
+});
+
+const { id, url } = await response.json();
+// url is "/f/<id>" — the live form URL
+```
+
+Then present:
+> **Your form is live at:** `https://<formant-service-url>/f/<id>`
+>
+> Responses are being collected automatically. To view or export them, use the same API key.
+
+### Including Service as a Submit Destination
+
+When deploying, add the service as a submit destination so responses are collected automatically:
+
+```json
+"submit": {
+  "destinations": [
+    {
+      "type": "service",
+      "formId": "<generated-form-id>",
+      "endpoint": "https://<formant-service-url>"
+    },
+    { "type": "excel", "filename": "my-responses" }
+  ]
+}
+```
+
+**Note:** Always keep `excel` as a fallback destination, so users can download responses even if the service is unreachable.
+
+### Managing Deployed Forms
+
+All management endpoints require the same API key used to create the form:
+
+| Action | Method | Endpoint |
+|--------|--------|----------|
+| View responses | `GET` | `/api/responses/<formId>?limit=100&offset=0` |
+| Export as Excel | `GET` | `/api/responses/<formId>/xlsx` |
+| Delete form | `DELETE` | `/api/forms/<formId>` |
+
+All requests need `Authorization: Bearer <api-key>` header.
+
+---
+
 ## Do NOT
 
 - **Generate field IDs like `q1`, `q2`** — use descriptive names (`"satisfaction"`, `"email"`, `"favorite-feature"`)

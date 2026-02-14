@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { corsMiddleware } from "./middleware/cors";
+import { formsApp } from "./routes/forms";
+import { responsesApp } from "./routes/responses";
+import { exportApp } from "./routes/export";
 import type { AppEnv } from "./types";
 
 // Re-export types for consumer convenience
@@ -15,12 +18,9 @@ app.use("*", corsMiddleware());
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
-// ─── Route stubs — implemented in Phase 3B ───
-// POST   /api/forms            — Create a form (auth required)
-// GET    /f/:id                — Serve form HTML (public)
-// POST   /api/responses/:formId — Submit a response (public)
-// GET    /api/responses/:formId — List responses (auth required)
-// GET    /api/responses/:formId/xlsx — Export as Excel (auth required)
-// DELETE /api/forms/:id        — Delete a form (auth required)
+// ─── Mount route groups ───
+app.route("/", formsApp);
+app.route("/", responsesApp);
+app.route("/", exportApp);
 
 export default app;

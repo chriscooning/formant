@@ -17,7 +17,7 @@ Track which phases are complete. Each agent session should read this first and u
 | 1-Skill | Claude Skill (Initial) | **complete** | SKILL.md + product-feedback example (JSON + 49KB HTML), tsc clean, no regressions |
 | 2 | Google Sheets Connector | **complete** | Apps Script + SETUP.md, hardened sheets.ts (field titles, arrays, truncation, booleans), skill updated, 23 submit tests pass, tsc clean |
 | 3A | Service Database & Middleware | **complete** | 18 tests pass, tsc clean, D1 schema + queries + CORS + auth middleware + Hono skeleton |
-| 3B | Service API Routes & Tests | not started | Depends on 3A + 1F |
+| 3B | Service API Routes & Tests | **complete** | 35 new tests (53 total service), tsc clean, all 6 endpoints, XLSX export, skill deployment docs |
 | 4 | Multi-Destination & Webhooks | not started | Depends on 1E-2 + 3B |
 
 ## Execution Order

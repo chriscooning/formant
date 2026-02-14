@@ -12,7 +12,8 @@
   "dependencies": {
     "@formant/core": "workspace:*",
     "hono": "latest",
-    "nanoid": "latest"
+    "nanoid": "latest",
+    "xlsx": "latest"
   },
   "devDependencies": {
     "typescript": "^5.7",
