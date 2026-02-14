@@ -6,7 +6,7 @@ Track which phases are complete. Each agent session should read this first and u
 
 | Phase | Description | Status | Notes |
 |-------|-------------|--------|-------|
-| 1A | Project Scaffolding | not started | |
+| 1A | Project Scaffolding | **complete** | All packages scaffolded, tsc passes, vitest runs |
 | 1B | Core Types, Validation, Engine | not started | Depends on 1A |
 | 1C | Renderer Hooks & Shared Components | not started | Depends on 1B |
 | 1D | Question Components | not started | Depends on 1C |
@@ -42,4 +42,7 @@ Record any issues found during implementation that affect other phases.
 
 | Date | Phase | Issue | Resolution |
 |------|-------|-------|------------|
-| — | — | — | — |
+| 2026-02-14 | 1A | pnpm needed corepack enable (not pre-installed) | Resolved by running `corepack enable pnpm` |
+| 2026-02-14 | 1A | vitest `test.workspace` deprecated in v3, renamed to `test.projects` | Updated vitest.config.ts to use `projects` |
+| 2026-02-14 | 1A | e2e playwright.config.ts needed tsconfig.json + typescript devDep (not in plan) | Added both; simplified config to avoid `process.env` references |
+| 2026-02-14 | 1A | esbuild/workerd/sharp need build script approval in pnpm 10 | Added `pnpm.onlyBuiltDependencies` to root package.json |

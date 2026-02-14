@@ -1,0 +1,26 @@
+{
+  "name": "formant",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "vitest",
+    "test:e2e": "pnpm --filter e2e test",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp", "workerd"]
+  },
+  "devDependencies": {
+    "typescript": "^5.7",
+    "vitest": "^3",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "eslint-config-prettier": "^10",
+    "prettier": "^3"
+  }
+}

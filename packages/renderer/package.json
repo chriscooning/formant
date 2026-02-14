@@ -1,0 +1,22 @@
+{
+  "name": "@formant/renderer",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@formant/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7",
+    "vitest": "^3",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "happy-dom": "latest"
+  }
+}

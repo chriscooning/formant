@@ -1,0 +1,14 @@
+{
+  "name": "e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "@formant/html-builder": "workspace:*",
+    "@formant/core": "workspace:*",
+    "typescript": "^5.7"
+  }
+}
