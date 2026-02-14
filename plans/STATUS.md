@@ -8,8 +8,8 @@ Track which phases are complete. Each agent session should read this first and u
 |-------|-------------|--------|-------|
 | 1A | Project Scaffolding | **complete** | All packages scaffolded, tsc passes, vitest runs |
 | 1B | Core Types, Validation, Engine | **complete** | 138 tests pass, tsc clean |
-| 1C | Renderer Hooks & Shared Components | not started | Depends on 1B |
-| 1D | Question Components | not started | Depends on 1C |
+| 1C | Renderer Hooks & Shared Components | **complete** | 3 hooks + 5 shared components, tsc clean |
+| 1D | Question Components | **complete** | 13 components + registry, tsc clean, all FieldTypes mapped |
 | 1E-1 | Styles & Submit Handlers | not started | Depends on 1D |
 | 1E-2 | Main Component & Auto-Save | not started | Depends on 1E-1 |
 | 1F | HTML Builder | not started | Depends on 1E-2 |
