@@ -35,7 +35,7 @@ export async function submitResponses(
     destinations.map(async (dest): Promise<SubmitResult> => {
       switch (dest.type) {
         case "sheets":
-          await submitToSheets(dest.url, response);
+          await submitToSheets(dest.url, response, schema);
           return { destination: "sheets", success: true };
 
         case "webhook":
