@@ -7,7 +7,7 @@ Track which phases are complete. Each agent session should read this first and u
 | Phase | Description | Status | Notes |
 |-------|-------------|--------|-------|
 | 1A | Project Scaffolding | **complete** | All packages scaffolded, tsc passes, vitest runs |
-| 1B | Core Types, Validation, Engine | not started | Depends on 1A |
+| 1B | Core Types, Validation, Engine | **complete** | 138 tests pass, tsc clean |
 | 1C | Renderer Hooks & Shared Components | not started | Depends on 1B |
 | 1D | Question Components | not started | Depends on 1C |
 | 1E-1 | Styles & Submit Handlers | not started | Depends on 1D |
@@ -46,3 +46,5 @@ Record any issues found during implementation that affect other phases.
 | 2026-02-14 | 1A | vitest `test.workspace` deprecated in v3, renamed to `test.projects` | Updated vitest.config.ts to use `projects` |
 | 2026-02-14 | 1A | e2e playwright.config.ts needed tsconfig.json + typescript devDep (not in plan) | Added both; simplified config to avoid `process.env` references |
 | 2026-02-14 | 1A | esbuild/workerd/sharp need build script approval in pnpm 10 | Added `pnpm.onlyBuiltDependencies` to root package.json |
+| 2026-02-14 | 1A | No eslint.config.js in project root — `pnpm lint` fails on eslint step | Pre-existing; not blocking. Needs eslint flat config added. |
+| 2026-02-14 | 1B | core package had no vitest.config.ts — root projects config caused path resolution error | Added `packages/core/vitest.config.ts` |
