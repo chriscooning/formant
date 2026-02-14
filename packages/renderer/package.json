@@ -13,10 +13,12 @@
     "@formant/core": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.7",
-    "vitest": "^3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "happy-dom": "latest"
+    "happy-dom": "latest",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.7",
+    "vitest": "^3"
   }
 }
