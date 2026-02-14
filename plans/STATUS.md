@@ -13,10 +13,10 @@ Track which phases are complete. Each agent session should read this first and u
 | 1E-1 | Styles & Submit Handlers | **complete** | All 22 CSS sections in styles.ts, 5 submit handlers (handler, sheets, webhook, service, excel+csv), tsc clean |
 | 1E-2 | Main Component & Auto-Save | **complete** | Formant component, useAutoSave hook, entry point, 13 tests pass, tsc clean |
 | 1F | HTML Builder | **complete** | 12 tests pass, tsc clean, smoke test generates 46KB HTML |
-| 1G | E2E Tests | **in progress** | 14/20 tests pass; 6 blocked by renderer stale-closure bug (see Issues Log) |
+| 1G | E2E Tests | **complete** | 20/20 non-skipped tests pass; 4 submit stubs skipped (Phase 4) |
 | 1-Skill | Claude Skill (Initial) | not started | Depends on 1F |
-| 2 | Google Sheets Connector | not started | Depends on 1E-2 |
-| 3A | Service Database & Middleware | not started | Depends on 1B |
+| 2 | Google Sheets Connector | **complete** | Apps Script + SETUP.md, hardened sheets.ts (field titles, arrays, truncation, booleans), skill updated, 23 submit tests pass, tsc clean |
+| 3A | Service Database & Middleware | **complete** | 18 tests pass, tsc clean, D1 schema + queries + CORS + auth middleware + Hono skeleton |
 | 3B | Service API Routes & Tests | not started | Depends on 3A + 1F |
 | 4 | Multi-Destination & Webhooks | not started | Depends on 1E-2 + 3B |
 
@@ -51,54 +51,17 @@ Record any issues found during implementation that affect other phases.
 | 2026-02-14 | 1F | esbuild 0.27 removed plugin support from `buildSync()` — plan's plugin approach doesn't work | Used `banner` + `external` instead of esbuild plugin to map React/ReactDOM to CDN globals |
 | 2026-02-14 | 1F | html-builder tsconfig `rootDir: "./src"` blocked importing `formantStyles` from renderer | Removed `rootDir` from tsconfig (not needed with `noEmit: true`) |
 | 2026-02-14 | 1F | html-builder was missing `@types/node` — `node:path`, `node:fs` etc. failed to resolve | Added `@types/node` as devDependency |
-| 2026-02-14 | 1F | **React 19 UMD CDN URLs 404.** `template.ts` uses `unpkg.com/react@19/umd/...` but React 19 removed UMD builds entirely. Generated HTML forms load no React, nothing renders. | E2E global-setup.ts patches URLs to React 18 UMD as workaround. **Needs permanent fix in `packages/html-builder/src/template.ts`** — pin to React 18, use esm.sh+importmap, or switch to inline bundled React. |
-| 2026-02-14 | 1D | **Choice/Rating/Scale/YesNo stale-closure auto-advance bug.** See detailed description below. | **Needs fix in renderer.** Blocks 6 E2E tests. |
+| 2026-02-14 | 1F | **React 19 UMD CDN URLs 404.** `template.ts` uses `unpkg.com/react@19/umd/...` but React 19 removed UMD builds entirely. Generated HTML forms load no React, nothing renders. | **Resolved.** Pinned CDN URLs to React 18 UMD in `template.ts`. Removed `CDN_PATCHES` workaround from `global-setup.ts`. Updated `build.test.ts` assertions to match. |
+| 2026-02-14 | 1D | **Choice/Rating/Scale/YesNo stale-closure auto-advance bug.** See detailed description below. | **Resolved.** Added `onNextRef` pattern (useRef for latest `onNext`) in all four components. Fixed `useCallback`/dep arrays for keyboard handler in `Choice.tsx`. |
+| 2026-02-14 | 1B | **yes_no validator rejected booleans.** Validator expected string labels ("Yes"/"No") but YesNo component stores booleans. Blocked Y/N keyboard test. | **Resolved.** Updated `validate.ts` to accept `true`/`false` as valid yes_no values alongside string labels. |
+| 2026-02-14 | 1G | **Branching test selector ambiguity.** `selectChoice("Unsatisfied")` matched both "Unsatisfied" and "Very unsatisfied" due to substring `hasText` matching. | **Resolved.** Changed to exact regex match on `.ff-choice-label` text in `branching.spec.ts`. |
 
-### Detailed Bug: Stale Closure Auto-Advance (Phase 1D)
+### Resolved: Stale Closure Auto-Advance (Phase 1D) + yes_no Validator + Branching Selector
 
-**Affected files:**
-- `packages/renderer/src/questions/Choice.tsx` (confirmed)
-- Likely also `Rating.tsx`, `Scale.tsx`, `YesNo.tsx` (same pattern)
+All three issues resolved. **20/20 non-skipped E2E tests pass** (4 submit stubs skipped for Phase 4).
 
-**Symptom:** When a user clicks/selects an option on a required choice field, the form does NOT advance to the next question. Instead it silently fails or shows a validation error ("X is required") even though the option was visually selected.
-
-**Root cause — stale closure in setTimeout:**
-
-In `Choice.tsx`, the `handleSelect` function (line 30-44) does two things:
-1. `onChange(option)` — tells the parent `Formant` component to update state (`setAnswer`)
-2. `setTimeout(() => { onNext() }, 300)` — fires auto-advance after a delay
-
-The problem is that `onNext` inside the timeout closure is captured from the **current render**, BEFORE `onChange` triggers a re-render. The call chain is:
-
-```
-onNext (captured at render N)
-  → goNext (depends on state from render N)
-    → state.answers[fieldId] === undefined  ← still empty!
-      → validateField(field, undefined) → "X is required" → return false
-```
-
-After `onChange`, React re-renders (render N+1) with the answer in state, creating a new `goNext` that would pass validation. But the timeout already captured the old `onNext` from render N.
-
-**Why it only affects required fields:** For optional fields, `validateField(field, undefined)` returns `null` (no error), so the stale `goNext` still advances. For required fields, it returns an error string, so `goNext` aborts.
-
-**Second stale closure (keyboard handler):** The `useEffect` at line 53 registers a `keydown` handler that calls `handleSelect`. Its dependency array is `[choiceField.options, choiceField.allowOther]` — it does NOT include `handleSelect`, `onChange`, or `onNext`. Since options don't change after mount, the keyboard handler permanently captures the `handleSelect` from the first render, which in turn captures the first render's `onNext`.
-
-**Suggested fixes (pick one):**
-1. Use a `useRef` to hold the latest `onNext` and read `ref.current` inside the timeout
-2. Use `useCallback` with proper deps for `handleSelect` and include it in the keyboard handler's dep array
-3. Use `flushSync` around `onChange` to force synchronous state commit before the timeout
-
-**E2E test workaround attempted:** Click/key-select the option, then `waitForTimeout(200)` + `page.keyboard.press("Enter")` to invoke the global keyboard handler (which IS properly re-registered). Works for some components but still fails for branching tests and keyboard nav tests for rating/scale/yes-no.
-
-**Tests blocked (6 of 20 non-skipped):**
-- `branching.spec.ts` — all 3 tests (positive branch, negative branch, back navigation)
-- `keyboard.spec.ts` — Y/N keys, number keys for rating, number keys for scale
-
-**Tests passing (14 of 20 non-skipped):**
-- `formant.spec.ts` — 2/2 (happy path, skip optional)
-- `keyboard.spec.ts` — 3/6 (Enter advances, letter keys select choice, Backspace goes back)
-- `validation.spec.ts` — 5/5 (all validation error state tests)
-- `theme.spec.ts` — 4/4 (dark/light mode, toggle, readable text)
-
-**Tests skipped (4):**
-- `submit.spec.ts` — 4 stubs (deferred to Phase 4)
+**Fixes applied:**
+1. **Stale closure** (Choice, Rating, Scale, YesNo): Added `onNextRef = useRef(onNext)` pattern — ref updated every render, `ref.current` read inside setTimeout. Choice.tsx also got `useCallback` for `handleSelect` and fixed keyboard effect dep array.
+2. **yes_no validator** (`core/validate.ts`): Updated to accept `true`/`false` booleans in addition to string labels. The YesNo component stores booleans but the validator only accepted strings.
+3. **CDN URLs** (`html-builder/template.ts`): Pinned to React 18 UMD. Removed `CDN_PATCHES` workaround from `e2e/global-setup.ts`.
+4. **Branching selector** (`branching.spec.ts`): Changed `hasText` to exact regex match on `.ff-choice-label` to avoid "Unsatisfied" matching "Very unsatisfied".
