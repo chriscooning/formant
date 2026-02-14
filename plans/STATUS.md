@@ -11,8 +11,8 @@ Track which phases are complete. Each agent session should read this first and u
 | 1C | Renderer Hooks & Shared Components | **complete** | 3 hooks + 5 shared components, tsc clean |
 | 1D | Question Components | **complete** | 13 components + registry, tsc clean, all FieldTypes mapped |
 | 1E-1 | Styles & Submit Handlers | **complete** | All 22 CSS sections in styles.ts, 5 submit handlers (handler, sheets, webhook, service, excel+csv), tsc clean |
-| 1E-2 | Main Component & Auto-Save | not started | Depends on 1E-1 |
-| 1F | HTML Builder | not started | Depends on 1E-2 |
+| 1E-2 | Main Component & Auto-Save | **complete** | Formant component, useAutoSave hook, entry point, 13 tests pass, tsc clean |
+| 1F | HTML Builder | **complete** | 12 tests pass, tsc clean, smoke test generates 46KB HTML |
 | 1G | E2E Tests | not started | Depends on 1F |
 | 1-Skill | Claude Skill (Initial) | not started | Depends on 1F |
 | 2 | Google Sheets Connector | not started | Depends on 1E-2 |
@@ -48,3 +48,6 @@ Record any issues found during implementation that affect other phases.
 | 2026-02-14 | 1A | esbuild/workerd/sharp need build script approval in pnpm 10 | Added `pnpm.onlyBuiltDependencies` to root package.json |
 | 2026-02-14 | 1A | No eslint.config.js in project root — `pnpm lint` fails on eslint step | Pre-existing; not blocking. Needs eslint flat config added. |
 | 2026-02-14 | 1B | core package had no vitest.config.ts — root projects config caused path resolution error | Added `packages/core/vitest.config.ts` |
+| 2026-02-14 | 1F | esbuild 0.27 removed plugin support from `buildSync()` — plan's plugin approach doesn't work | Used `banner` + `external` instead of esbuild plugin to map React/ReactDOM to CDN globals |
+| 2026-02-14 | 1F | html-builder tsconfig `rootDir: "./src"` blocked importing `formantStyles` from renderer | Removed `rootDir` from tsconfig (not needed with `noEmit: true`) |
+| 2026-02-14 | 1F | html-builder was missing `@types/node` — `node:path`, `node:fs` etc. failed to resolve | Added `@types/node` as devDependency |

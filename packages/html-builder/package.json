@@ -11,9 +11,13 @@
   },
   "dependencies": {
     "@formant/core": "workspace:*",
+    "@formant/renderer": "workspace:*",
     "esbuild": "latest"
   },
   "devDependencies": {
+    "@types/node": "^22",
+    "react": "^19",
+    "react-dom": "^19",
     "typescript": "^5.7",
     "vitest": "^3"
   }

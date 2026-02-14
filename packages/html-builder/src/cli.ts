@@ -1,1 +1,4 @@
-// TODO: Future phase — CLI entry point (formant build schema.json -o form.html)
+// TODO: Future phase — CLI entry point
+// Usage: formant build schema.json -o form.html
+// Will use commander or citty for arg parsing
+export {};
