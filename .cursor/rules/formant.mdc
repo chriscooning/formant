@@ -1,0 +1,52 @@
+---
+description: Formant project conventions — read by every agent session
+alwaysApply: true
+---
+
+# Formant — Agent Conventions
+
+## Project
+
+Self-contained form generation system. Forms are single HTML files. Monorepo with pnpm workspaces.
+
+## Before Writing Code
+
+1. Read the relevant phase plan file in `plans/` — it is your spec
+2. Read `plans/STATUS.md` to understand what's already built
+3. Read existing code in files you're about to modify — never overwrite blindly
+4. If a previous phase left something broken, flag it in STATUS.md but don't silently fix unrelated code
+
+## Code Standards
+
+- TypeScript strict mode, no `any` (warn-level in eslint — avoid but use if truly needed)
+- All colors via CSS custom properties `var(--ff-*)` — never hardcode colors in components
+- Immutable state in engine functions — always return new objects, never mutate
+- React components: functional only, named exports, props interface above component
+- File naming: PascalCase for components (`.tsx`), camelCase for utilities (`.ts`)
+- Imports: `@formant/core` for types/validation/engine, relative paths within a package
+- Tests: colocate in `__tests__/` directory within each package
+
+## Verification Checklist (run before declaring done)
+
+```bash
+# 1. TypeScript compiles with no errors
+pnpm -r exec tsc --noEmit
+
+# 2. Tests pass for the package you changed
+pnpm --filter @formant/<package> test
+
+# 3. Lint passes
+pnpm lint
+
+# 4. Check for regressions in downstream packages if you changed core
+pnpm test
+```
+
+## Do NOT
+
+- Modify files outside your phase scope without flagging it
+- Skip tests — every phase plan has specific test requirements
+- Use `localStorage` in the renderer (Claude artifacts don't support it)
+- Hardcode CDN URLs outside of `template.ts`
+- Commit `node_modules`, `dist`, or `.wrangler` directories
+- Install dependencies not listed in the phase plan without explaining why
