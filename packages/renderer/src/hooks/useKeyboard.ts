@@ -7,12 +7,10 @@ export interface UseKeyboardConfig {
   onSelect: (key: string) => void;
   currentField: Field | null;
   phase: "entering" | "active" | "exiting";
-  inputFocused: boolean;
 }
 
 export function useKeyboard(config: UseKeyboardConfig): void {
-  const { onNext, onBack, onSelect, currentField, phase, inputFocused } =
-    config;
+  const { onNext, onBack, onSelect, currentField, phase } = config;
 
   useEffect(() => {
     if (phase !== "active") return;
@@ -37,8 +35,12 @@ export function useKeyboard(config: UseKeyboardConfig): void {
         return;
       }
 
-      // Backspace — only when input is not focused
-      if (key === "Backspace" && !inputFocused) {
+      // Backspace — only when no form control is focused
+      if (key === "Backspace") {
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+          return; // Let browser handle Backspace normally in form controls
+        }
         event.preventDefault();
         onBack();
         return;
@@ -76,5 +78,5 @@ export function useKeyboard(config: UseKeyboardConfig): void {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [phase, onNext, onBack, onSelect, currentField, inputFocused]);
+  }, [phase, onNext, onBack, onSelect, currentField]);
 }

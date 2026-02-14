@@ -218,6 +218,34 @@ test.describe("Keyboard Navigation", () => {
     );
   });
 
+  test("Backspace in text input deletes character instead of navigating back", async ({ page }) => {
+    await page.goto("/simple-form.html");
+
+    // Advance past welcome
+    await page.locator(".ff-welcome-btn").click();
+    await expect(page.locator(".ff-question-title")).toHaveText(
+      "What is your name?",
+    );
+    await waitForKeyboardReady(page);
+
+    // Type text into the input using keyboard (not fill, to trigger keydown events)
+    const input = page.locator(".ff-input");
+    await input.click();
+    await page.keyboard.type("Hello");
+    await expect(input).toHaveValue("Hello");
+
+    // Press Backspace while input is focused — should delete a character, NOT navigate back
+    await page.keyboard.press("Backspace");
+
+    // Verify the form did NOT go back — question title is unchanged
+    await expect(page.locator(".ff-question-title")).toHaveText(
+      "What is your name?",
+    );
+
+    // Verify the input value lost a character
+    await expect(input).toHaveValue("Hell");
+  });
+
   test("Backspace goes back", async ({ page }) => {
     await page.goto("/simple-form.html");
 

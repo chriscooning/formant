@@ -45,8 +45,6 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
   );
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
-
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-save: enabled when at least one service destination exists
@@ -270,7 +268,6 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
     onSelect: handleSelect,
     currentField,
     phase,
-    inputFocused,
   });
 
   // ─── Render ───
