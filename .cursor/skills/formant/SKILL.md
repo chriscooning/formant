@@ -16,9 +16,25 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
    ```bash
    pnpm formant build forms/<name>.json -o forms/<name>.html
    ```
-5. **Tell** the user the file is ready:
-   - Open locally: `xdg-open forms/<name>.html` (Linux) / `open forms/<name>.html` (macOS)
-   - Deploy to Vercel: `pnpm deploy forms/<name>.html`
+   This produces both `forms/<name>.html` and `forms/<name>.json` (schema copy).
+5. **Ask** the user: "How would you like to use this form?" then deploy:
+   - **Offline** — just try it or email the HTML file
+   - **Vercel** — shareable public URL, no server needed
+   - **Cloudflare** — hosting + built-in response collection (recommended for production)
+
+## Deploy Options
+
+| Target | Best For | Response Collection | Command |
+|--------|----------|---------------------|---------|
+| **Offline** | Testing, internal use, email the HTML file | Excel download on submit | `pnpm deploy <form.html> --target offline` |
+| **Vercel** | Shareable public URL, no server-side storage needed | Excel download (or add Google Sheets) | `pnpm deploy <form.html> --target vercel` |
+| **Cloudflare** | Production: hosting + response DB in one place | Built-in D1 database + API + XLSX export | `pnpm deploy <form.html> --target cloudflare` |
+
+- **Offline**: Opens the form in the default browser. Responses download as Excel on submit. No hosting needed.
+- **Vercel**: Deploys as a static site with a public URL. Optionally set up Google Sheets for response collection (the script walks through it).
+- **Cloudflare**: Deploys a Cloudflare Worker with D1 database. Forms are uploaded via API, responses are collected server-side, and an XLSX export endpoint is available. First-time setup creates the database and runs migrations automatically.
+
+Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
 
 ## Field Type Cheat Sheet
 
@@ -101,9 +117,20 @@ All branches must eventually reach the `ending` field.
 ## CLI Reference
 
 ```bash
+# Build
 pnpm formant build <schema.json> [-o output.html] [--no-minify] [--inline]
 pnpm formant preview <schema.json>   # build + open in browser
-pnpm deploy <form.html>              # deploy to Vercel
+
+# Deploy (interactive menu)
+pnpm deploy <form.html>
+
+# Deploy (skip menu)
+pnpm deploy <form.html> --target offline      # open in browser
+pnpm deploy <form.html> --target vercel       # deploy to Vercel
+pnpm deploy <form.html> --target cloudflare   # deploy to Cloudflare Workers
+
+# Google Sheets setup (standalone)
+bash scripts/setup-sheets.sh
 ```
 
 ## Full Schema Reference

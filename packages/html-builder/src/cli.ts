@@ -16,20 +16,25 @@ function usage(): void {
   Usage:
     formant build <schema.json> [-o <output.html>] [--no-minify] [--inline]
     formant preview <schema.json> [--no-minify] [--inline]
+    formant deploy <form.html> [--target offline|vercel|cloudflare]
 
   Commands:
     build     Compile a schema JSON file into a standalone HTML form
     preview   Build and immediately open in the default browser
+    deploy    Deploy a built form (interactive menu or --target to skip)
 
   Options:
     -o, --output <file>   Output path (default: <schema-name>.html next to the JSON)
     --no-minify           Skip JS minification (useful for debugging)
     --inline              Inline React/ReactDOM instead of CDN script tags
+    --target <target>     Deploy target: offline, vercel, or cloudflare
 
   Examples:
     formant build feedback.json
     formant build feedback.json -o dist/feedback.html
     formant preview survey.json
+    formant deploy forms/feedback.html
+    formant deploy forms/feedback.html --target cloudflare
 `);
 }
 
@@ -109,6 +114,13 @@ function buildForm(argv: string[]): string {
 
   fs.writeFileSync(outPath, html);
 
+  // Auto-copy source schema JSON alongside the output HTML
+  const schemaOutPath = outPath.replace(/\.html$/, ".json");
+  if (schemaOutPath !== outPath) {
+    fs.copyFileSync(resolved, schemaOutPath);
+    console.log(`Schema copied to ${schemaOutPath}`);
+  }
+
   const sizeKB = (Buffer.byteLength(html) / 1024).toFixed(1);
   console.log(`Done — ${sizeKB} KB written to ${outPath}`);
 
@@ -137,6 +149,23 @@ switch (command) {
       execSync(`${opener} ${JSON.stringify(outPath)}`, { stdio: "ignore" });
     } catch {
       console.log(`Could not open browser. Open manually: ${outPath}`);
+    }
+    break;
+  }
+
+  case "deploy": {
+    // Delegate to scripts/deploy.sh, forwarding all remaining args
+    const deployScript = path.resolve(
+      __dirname,
+      "../../../scripts/deploy.sh",
+    );
+    const deployArgs = args.slice(1).map((a) => JSON.stringify(a)).join(" ");
+    try {
+      execSync(`bash ${JSON.stringify(deployScript)} ${deployArgs}`, {
+        stdio: "inherit",
+      });
+    } catch {
+      process.exit(1);
     }
     break;
   }

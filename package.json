@@ -7,7 +7,7 @@
     "test": "vitest",
     "test:e2e": "pnpm --filter e2e test",
     "formant": "tsx packages/html-builder/src/cli.ts",
-    "deploy": "bash scripts/deploy-vercel.sh",
+    "deploy": "tsx packages/html-builder/src/cli.ts deploy",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write ."
   },

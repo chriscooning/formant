@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ─── Formant Deploy — Vercel (static hosting) ───
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 HTML_FILE="${1:?Usage: deploy-vercel.sh <form.html>}"
 
 # Resolve to absolute path
@@ -11,7 +15,31 @@ if [[ ! -f "$HTML_FILE" ]]; then
   exit 1
 fi
 
-# Create a temp project directory
+# ─── Check Vercel CLI ───
+
+if ! command -v vercel &>/dev/null; then
+  echo "Vercel CLI not found."
+  read -rp "Install it now with 'npm i -g vercel'? (Y/n): " install_choice
+  if [[ "${install_choice:-Y}" =~ ^[Yy] ]]; then
+    npm i -g vercel
+  else
+    echo "Aborting — install vercel CLI and try again." >&2
+    exit 1
+  fi
+fi
+
+# ─── Check authentication ───
+
+echo "Checking Vercel authentication..."
+if ! vercel whoami &>/dev/null 2>&1; then
+  echo "Not logged in to Vercel. Starting login..."
+  vercel login
+fi
+echo "Authenticated as: $(vercel whoami 2>/dev/null)"
+echo ""
+
+# ─── Deploy ───
+
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
@@ -29,12 +57,24 @@ VERCEL
 echo "Deploying $(basename "$HTML_FILE") to Vercel..."
 echo ""
 
-# Deploy (--yes skips confirmation prompts)
 cd "$TMPDIR"
-npx vercel --yes
+DEPLOY_URL=$(vercel --yes 2>&1 | tail -1)
 
 echo ""
-echo "Done. To deploy to production, run:"
-echo "  npx vercel --prod --yes"
+echo "  ✓ Deployed to: $DEPLOY_URL"
 echo ""
-echo "in the same project, or re-run this script and add --prod."
+echo "  To deploy to production, run:"
+echo "    vercel --prod --yes"
+echo ""
+
+# ─── Optional Google Sheets setup ───
+
+read -rp "Set up Google Sheets for response collection? (y/N): " sheets_choice
+if [[ "${sheets_choice:-N}" =~ ^[Yy] ]]; then
+  exec bash "$SCRIPT_DIR/setup-sheets.sh"
+else
+  echo ""
+  echo "  No problem — responses will download as Excel by default."
+  echo "  You can set up Sheets later with: bash scripts/setup-sheets.sh"
+  echo ""
+fi
