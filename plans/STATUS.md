@@ -29,6 +29,7 @@ Track which phases are complete. Each agent session should read this first and u
 | 8C | Deploy script + form integration | **pending** | Depends on 8B |
 | 8D | Testing parity + documentation | **pending** | Depends on 8C |
 | 9 | Connect Google Sheet OAuth | **complete** | Backend routes, admin UI, sheetsStorage, submit handler. Prereqs: GCP OAuth + secrets |
+| 10 | Seamless AI Deploy | **pending** | `--with-admin`, `--with-sheets` for Vercel; skill updates. See plans/seamless-ai-deploy.md |
 
 ## Execution Order
 
