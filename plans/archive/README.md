@@ -13,5 +13,6 @@ Completed phase and feature plans. Kept for historical reference and implementat
 - **partial-fills-capture** — Session-based partial submissions (Phase 6)
 - **dashboard-analytics** — Chart, big numbers, highest dropoff (Phase 7)
 - **unified-deploy-system** — Offline / Vercel / Cloudflare deploy architecture
+- **fix-backspace-input** — Backspace in text inputs (document.activeElement fix, completed)
 
 For current status, see [../STATUS.md](../STATUS.md).
