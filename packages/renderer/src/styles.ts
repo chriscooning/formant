@@ -605,14 +605,18 @@ html, body {
   position: fixed;
   top: 16px;
   left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--ff-border);
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
   font-family: var(--ff-font-sans);
-  font-size: 16px;
-  color: var(--ff-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ff-text);
   z-index: 100;
   transition: all var(--ff-transition);
 }
