@@ -1,0 +1,53 @@
+---
+description: Cloudflare deploy script conventions — follow when editing deploy-cloudflare.sh
+globs: scripts/deploy-cloudflare.sh
+alwaysApply: false
+---
+
+# Cloudflare Deploy Script Conventions
+
+When implementing or updating `scripts/deploy-cloudflare.sh`, follow these rules:
+
+## 1. Form URL Format
+
+Forms are served at `/f/{id}`, not `/forms/{id}`.
+
+- In deploy output, show: `Live URL: $WORKER_URL/f/$FORM_ID`
+- The API returns `url: "/f/{id}"` from POST /api/forms
+
+## 2. Upload-Only Mode
+
+If `WORKER_URL` is set in the environment, skip the Worker deploy and only upload the form.
+
+- Use case: Worker already deployed; user wants to retry form upload or upload another form
+- Example: `WORKER_URL=https://formant.SUBDOMAIN.workers.dev bash scripts/deploy-cloudflare.sh forms/<name>.html`
+- When skipping deploy, do not cd into the service package; stay in project root so paths resolve correctly
+
+## 3. Working Directory
+
+Before the form upload step (node -e and curl calls), ensure the current directory is the project root (`$ROOT_DIR`).
+
+- After wrangler deploy (which runs from the service package), run `cd "$ROOT_DIR"` before building the request body and uploading
+- This avoids path resolution issues when building the JSON payload
+
+## 4. Error Handling
+
+On form upload failure (HTTP non-2xx):
+
+- Print the HTTP status code and response body
+- Print a retry command: `WORKER_URL=$WORKER_URL bash scripts/deploy-cloudflare.sh $HTML_FILE`
+- Exit with code 1
+
+## 5. Wrangler Non-Interactive
+
+- Use `wrangler deploy --yes` to avoid interactive prompts where possible
+- workers.dev subdomain registration cannot be automated; if it is not registered, wrangler will fail
+- Direct users to the Cloudflare dashboard onboarding URL when deploy fails
+
+## Checklist for Deploy Script Changes
+
+- [ ] Live URL uses `/f/$FORM_ID`, not `/forms/$FORM_ID`
+- [ ] WORKER_URL env skips deploy when set
+- [ ] `cd "$ROOT_DIR"` before the form upload step
+- [ ] Upload failure prints the retry command with WORKER_URL
+- [ ] `wrangler deploy --yes` is used for non-interactive deploy

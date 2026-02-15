@@ -2,6 +2,9 @@
 set -euo pipefail
 
 # ─── Formant Deploy — Cloudflare Workers (full-stack hosting) ───
+#
+# Upload-only mode: set WORKER_URL to skip Worker deploy and only upload the form.
+# Example: WORKER_URL=https://formant.SUBDOMAIN.workers.dev bash scripts/deploy-cloudflare.sh forms/<name>.html
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE_DIR="$ROOT_DIR/packages/service"
@@ -17,86 +20,100 @@ if [[ ! -f "$HTML_FILE" ]]; then
   exit 1
 fi
 
-# ─── Step 1: Check wrangler ───
+# ─── Upload-only mode: WORKER_URL set → skip deploy ───
 
-echo "Checking wrangler..."
-if ! $WRANGLER --version &>/dev/null 2>&1; then
-  echo "Error: wrangler not found. Install it with:" >&2
-  echo "  pnpm --filter @formant/service add -D wrangler" >&2
-  exit 1
-fi
-
-# ─── Step 2: Check authentication ───
-
-echo "Checking Cloudflare authentication..."
-if ! $WRANGLER whoami 2>&1 | grep -q "You are logged in"; then
-  echo "Not logged in to Cloudflare. Starting login..."
-  $WRANGLER login
-fi
-echo ""
-
-# ─── Step 3: Check D1 database ───
-
-WRANGLER_TOML="$SERVICE_DIR/wrangler.toml"
-
-# Read current database_id from wrangler.toml
-CURRENT_DB_ID=$(grep 'database_id' "$WRANGLER_TOML" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-
-if [[ -z "$CURRENT_DB_ID" ]]; then
-  echo "No D1 database configured. Creating one..."
+if [[ -n "${WORKER_URL:-}" ]]; then
+  echo "WORKER_URL is set — skipping Worker deploy (upload-only mode)"
+  echo "  Worker: $WORKER_URL"
   echo ""
+else
+  # ─── Step 1: Check wrangler ───
 
-  # Create the database
-  CREATE_OUTPUT=$($WRANGLER d1 create formant-db 2>&1)
-  echo "$CREATE_OUTPUT"
-
-  # Parse database_id from output
-  DB_ID=$(echo "$CREATE_OUTPUT" | grep -oP 'database_id\s*=\s*"\K[^"]+' || \
-          echo "$CREATE_OUTPUT" | grep -oP '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
-
-  if [[ -z "$DB_ID" ]]; then
-    echo "Error: could not parse database_id from wrangler output." >&2
-    echo "Create the database manually and update wrangler.toml" >&2
+  echo "Checking wrangler..."
+  if ! $WRANGLER --version &>/dev/null 2>&1; then
+    echo "Error: wrangler not found. Install it with:" >&2
+    echo "  pnpm --filter @formant/service add -D wrangler" >&2
     exit 1
   fi
 
-  # Patch wrangler.toml with the new database_id
-  sed -i "s/database_id = \"\"/database_id = \"$DB_ID\"/" "$WRANGLER_TOML"
-  echo ""
-  echo "  ✓ Database created: $DB_ID"
-  echo "  ✓ Updated wrangler.toml"
+  # ─── Step 2: Check authentication ───
+
+  echo "Checking Cloudflare authentication..."
+  if ! $WRANGLER whoami 2>&1 | grep -q "You are logged in"; then
+    echo "Not logged in to Cloudflare. Starting login..."
+    $WRANGLER login
+  fi
   echo ""
 
-  # Run migration
-  echo "Running database migration..."
-  $WRANGLER d1 execute formant-db --remote --file="$SERVICE_DIR/src/db/schema.sql"
-  echo "  ✓ Migration applied"
+  # ─── Step 3: Check D1 database ───
+
+  WRANGLER_TOML="$SERVICE_DIR/wrangler.toml"
+
+  # Read current database_id from wrangler.toml
+  CURRENT_DB_ID=$(grep 'database_id' "$WRANGLER_TOML" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+
+  if [[ -z "$CURRENT_DB_ID" ]]; then
+    echo "No D1 database configured. Creating one..."
+    echo ""
+
+    # Create the database
+    CREATE_OUTPUT=$($WRANGLER d1 create formant-db 2>&1)
+    echo "$CREATE_OUTPUT"
+
+    # Parse database_id from output
+    DB_ID=$(echo "$CREATE_OUTPUT" | grep -oP 'database_id\s*=\s*"\K[^"]+' || \
+            echo "$CREATE_OUTPUT" | grep -oP '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+
+    if [[ -z "$DB_ID" ]]; then
+      echo "Error: could not parse database_id from wrangler output." >&2
+      echo "Create the database manually and update wrangler.toml" >&2
+      exit 1
+    fi
+
+    # Patch wrangler.toml with the new database_id
+    sed -i "s/database_id = \"\"/database_id = \"$DB_ID\"/" "$WRANGLER_TOML"
+    echo ""
+    echo "  ✓ Database created: $DB_ID"
+    echo "  ✓ Updated wrangler.toml"
+    echo ""
+
+    # Run migration
+    echo "Running database migration..."
+    $WRANGLER d1 execute formant-db --remote --file="$SERVICE_DIR/src/db/schema.sql"
+    echo "  ✓ Migration applied"
+    echo ""
+  else
+    echo "  D1 database already configured: $CURRENT_DB_ID"
+    echo ""
+  fi
+
+  # ─── Step 4: Deploy Worker ───
+
+  echo "Deploying Cloudflare Worker..."
+  cd "$SERVICE_DIR"
+  DEPLOY_OUTPUT=$($WRANGLER deploy --yes 2>&1)
+  echo "$DEPLOY_OUTPUT"
+
+  # Parse worker URL from output
+  WORKER_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+\.workers\.dev' | head -1)
+
+  if [[ -z "$WORKER_URL" ]]; then
+    echo ""
+    echo "Error: could not parse Worker URL from output." >&2
+    echo "If workers.dev subdomain is not registered, complete onboarding at:" >&2
+    echo "  https://dash.cloudflare.com/?to=/:account/workers/onboarding" >&2
+    echo ""
+    echo "Otherwise, check the output above for errors." >&2
+    exit 1
+  fi
+
   echo ""
-else
-  echo "  D1 database already configured: $CURRENT_DB_ID"
+  echo "  ✓ Worker deployed: $WORKER_URL"
   echo ""
+
+  # Return to project root before form upload (avoids path resolution issues)
+  cd "$ROOT_DIR"
 fi
-
-# ─── Step 4: Deploy Worker ───
-
-echo "Deploying Cloudflare Worker..."
-cd "$SERVICE_DIR"
-DEPLOY_OUTPUT=$($WRANGLER deploy 2>&1)
-echo "$DEPLOY_OUTPUT"
-
-# Parse worker URL from output
-WORKER_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+\.workers\.dev' | head -1)
-
-if [[ -z "$WORKER_URL" ]]; then
-  echo ""
-  echo "Warning: could not parse Worker URL from output." >&2
-  echo "Check the output above for your deployment URL." >&2
-  read -rp "Enter the Worker URL manually: " WORKER_URL
-fi
-
-echo ""
-echo "  ✓ Worker deployed: $WORKER_URL"
-echo ""
 
 # ─── Step 5: Generate API key ───
 
@@ -109,6 +126,9 @@ else
 fi
 
 # ─── Step 6: POST the form ───
+
+# Ensure we're in project root so paths resolve correctly
+cd "$ROOT_DIR"
 
 echo "Uploading form to Cloudflare Worker..."
 
@@ -156,7 +176,7 @@ if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
   echo "  ═══════════════════════════════════════════════"
   echo "  ✓ Form deployed successfully!"
   echo ""
-  echo "  Live URL:  $WORKER_URL/forms/$FORM_ID"
+  echo "  Live URL:  $WORKER_URL/f/$FORM_ID"
   echo "  API Key:   $API_KEY"
   echo "  Form ID:   $FORM_ID"
   echo ""
@@ -175,5 +195,9 @@ else
   echo ""
   echo "  Error uploading form (HTTP $HTTP_CODE):" >&2
   echo "  $BODY" >&2
+  echo ""
+  echo "  Retry upload only (skip Worker deploy):" >&2
+  echo "  WORKER_URL=$WORKER_URL bash scripts/deploy-cloudflare.sh $HTML_FILE" >&2
+  echo ""
   exit 1
 fi
