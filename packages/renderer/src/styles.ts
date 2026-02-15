@@ -138,6 +138,47 @@ html, body {
   margin-bottom: 32px;
 }
 
+/* 10b. Welcome screen */
+.ff-welcome {
+  text-align: center;
+}
+
+.ff-welcome-title {
+  font-family: var(--ff-font-sans);
+  font-weight: 300;
+  font-size: 28px;
+}
+
+.ff-welcome-subtitle {
+  font-family: var(--ff-font-sans);
+  font-weight: 300;
+  font-size: 15px;
+  color: var(--ff-text-secondary);
+  margin-top: 12px;
+}
+
+.ff-welcome-btn {
+  margin-top: 40px;
+  padding: 12px 28px;
+  background: var(--ff-accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--ff-font-sans);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all var(--ff-transition);
+}
+
+.ff-welcome-btn:hover {
+  background: var(--ff-accent-hover);
+  transform: translateY(-1px);
+}
+
+.ff-welcome-btn:active {
+  transform: translateY(0);
+}
+
 /* 11. Input styles */
 .ff-input-underline {
   border: none;
@@ -531,7 +572,29 @@ html, body {
   background: var(--ff-surface);
 }
 
-/* 20. Theme toggle */
+/* 20. Back button + Theme toggle */
+.ff-back-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background: transparent;
+  border: 1px solid var(--ff-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: var(--ff-font-sans);
+  font-size: 16px;
+  color: var(--ff-text-muted);
+  z-index: 100;
+  transition: all var(--ff-transition);
+}
+
+.ff-back-btn:hover {
+  border-color: var(--ff-border-hover);
+  color: var(--ff-text);
+}
+
+/* Theme toggle */
 .ff-theme-toggle {
   position: fixed;
   top: 16px;
