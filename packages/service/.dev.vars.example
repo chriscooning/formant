@@ -1,0 +1,9 @@
+# Copy to .dev.vars and fill in your values.
+# Used by Connect Google Sheet OAuth flow.
+#
+# Get credentials: https://console.cloud.google.com/apis/credentials
+# (Create OAuth 2.0 Client ID → Web application)
+#
+# Full setup guide: docs/connect-google-sheet-local.md (from repo root)
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret

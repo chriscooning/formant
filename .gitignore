@@ -10,3 +10,6 @@ apps/e2e/test-results/
 
 # Built forms (regenerable from JSON schemas)
 forms/*.html
+
+# Local secrets (never commit)
+packages/service/.dev.vars

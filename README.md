@@ -1,6 +1,10 @@
 # Formant
 
-Generate beautiful, self-contained HTML forms from natural language. Describe what you want to collect, and Formant builds a single HTML file with keyboard navigation, dark/light mode, smooth transitions, and multiple response destinations.
+Generate beautiful, self-contained HTML forms from natural language.
+
+**[Product & features →](docs/PRODUCT.md)**
+
+Describe what you want to collect, and Formant builds a single HTML file with keyboard navigation, dark/light mode, smooth transitions, and multiple response destinations.
 
 ## Quick Start
 
@@ -28,6 +32,16 @@ The AI handles the rest — generates the schema, builds the HTML, and asks how 
 Or just run `pnpm deploy forms/my-form.html` for an interactive menu.
 
 **Vercel (non-interactive / CI):** Non-interactive deploys (e.g. from Cursor agent or CI) require `script` (Debian/Ubuntu: `apt install bsdutils`). For CI, set `VERCEL_ORG_ID` or `VERCEL_SCOPE` to skip scope detection.
+
+## Connect Google Sheet (Local)
+
+Forms can send responses to Google Sheets via a one-click OAuth flow. To test locally:
+
+1. Set up OAuth credentials in [Google Cloud Console](https://console.cloud.google.com)
+2. Configure `packages/service/.dev.vars` (see `.dev.vars.example`)
+3. Run the API, build with `--local`, and serve the forms folder
+
+**Full guide:** [docs/connect-google-sheet-local.md](docs/connect-google-sheet-local.md)
 
 ## Manual CLI Usage
 
