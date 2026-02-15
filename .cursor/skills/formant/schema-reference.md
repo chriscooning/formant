@@ -651,7 +651,9 @@ All management endpoints require the same API key used to create the form:
 | Action | Method | Endpoint |
 |--------|--------|----------|
 | View responses | `GET` | `/api/responses/<formId>?limit=100&offset=0` |
+| Analytics | `GET` | `/api/responses/<formId>/analytics?days=7` (or 14, 30) |
 | Export as Excel | `GET` | `/api/responses/<formId>/xlsx` |
+| Export as CSV | `GET` | `/api/responses/<formId>/csv` |
 | Delete form | `DELETE` | `/api/forms/<formId>` |
 
 All requests need `Authorization: Bearer <api-key>` header.

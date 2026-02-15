@@ -220,7 +220,7 @@ if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
   echo "    curl -X DELETE -H 'Authorization: Bearer $API_KEY' $WORKER_URL/api/forms/$FORM_ID"
   echo ""
   if [[ -f "$TEMPLATE" ]]; then
-    echo "  Dashboard: forms/${BASENAME}-dashboard.html (open locally, paste API key to view responses)"
+    echo "  Dashboard: forms/${BASENAME}-dashboard.html (open locally, paste API key to view responses, analytics, and export)"
   fi
   echo "  ═══════════════════════════════════════════════"
   echo ""

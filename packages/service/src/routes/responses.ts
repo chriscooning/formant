@@ -7,6 +7,7 @@ import {
   insertResponse,
   updateResponse,
   getResponsesByFormId,
+  getAnalytics,
 } from "../db/queries";
 import { generateResponseId } from "../utils/id";
 
@@ -142,6 +143,39 @@ responsesApp.get("/api/responses/:formId", requireAuth(), async (c) => {
   });
 
   return c.json({ responses: formattedResponses, total });
+});
+
+// ─── GET /api/responses/:formId/analytics — Analytics (auth required) ───
+
+responsesApp.get("/api/responses/:formId/analytics", requireAuth(), async (c) => {
+  const formId = c.req.param("formId");
+  const apiKeyHash = c.get("apiKeyHash");
+
+  const form = await getFormById(c.env.DB, formId);
+  if (!form) {
+    return c.json({ error: "Form not found" }, 404);
+  }
+  if (form.api_key_hash !== apiKeyHash) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const daysParam = c.req.query("days");
+  const days =
+    daysParam === "14"
+      ? 14
+      : daysParam === "30"
+        ? 30
+        : 7;
+
+  try {
+    const analytics = await getAnalytics(c.env.DB, formId, days);
+    return c.json(analytics);
+  } catch (e) {
+    return c.json(
+      { error: e instanceof Error ? e.message : "Analytics error" },
+      500,
+    );
+  }
 });
 
 export { responsesApp };

@@ -23,7 +23,19 @@
     th { background: #f5f5f5; }
     .error { color: #c00; margin: 0.5rem 0; }
     .meta { color: #666; font-size: 0.875rem; margin-bottom: 1rem; }
+    .analytics { margin-bottom: 1.5rem; }
+    .analytics-range { display: flex; gap: 0.25rem; margin-bottom: 0.75rem; }
+    .analytics-range button { padding: 0.35rem 0.75rem; cursor: pointer; border: 1px solid #ccc; background: #f5f5f5; font-size: 0.875rem; }
+    .analytics-range button.active { background: #e0e8f0; border-color: #4a6fa5; }
+    .analytics-chart-wrap { margin-bottom: 1rem; max-width: 800px; height: 200px; }
+    .analytics-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+    @media (max-width: 640px) { .analytics-cards { grid-template-columns: repeat(2, 1fr); } }
+    .analytics-card { border: 1px solid #ccc; padding: 0.75rem; background: #fafafa; }
+    .analytics-card .label { font-size: 0.75rem; color: #666; margin-bottom: 0.25rem; }
+    .analytics-card .value { font-size: 1.25rem; font-weight: 600; }
+    .analytics-dropoff { font-size: 0.875rem; color: #555; margin-bottom: 0.5rem; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
   <h1>{{FORM_TITLE}} — Responses</h1>
@@ -32,6 +44,24 @@
   <div class="auth">
     <input type="password" id="apiKey" placeholder="Paste your API key" autocomplete="off">
     <button type="button" id="loadBtn">Load responses</button>
+  </div>
+
+  <div id="analyticsSection" class="analytics" style="display:none;">
+    <div class="analytics-range">
+      <button type="button" id="range7" class="active">7 days</button>
+      <button type="button" id="range14">14 days</button>
+      <button type="button" id="range30">30 days</button>
+    </div>
+    <div class="analytics-chart-wrap">
+      <canvas id="analyticsChart"></canvas>
+    </div>
+    <div class="analytics-cards">
+      <div class="analytics-card"><div class="label">Total Submissions</div><div class="value" id="cardSubmissions">—</div></div>
+      <div class="analytics-card"><div class="label">Total Views</div><div class="value" id="cardViews">—</div></div>
+      <div class="analytics-card"><div class="label">Completion Rate</div><div class="value" id="cardCompletion">—</div></div>
+      <div class="analytics-card"><div class="label">Avg Completion Time</div><div class="value" id="cardAvgTime">—</div></div>
+    </div>
+    <div class="analytics-dropoff" id="dropoffLine"></div>
   </div>
 
   <div class="tabs">
@@ -101,8 +131,14 @@
   const tbody = document.getElementById("tbody");
   const exportCsvBtn = document.getElementById("exportCsv");
   const exportXlsxBtn = document.getElementById("exportXlsx");
+  const analyticsSection = document.getElementById("analyticsSection");
+  const range7 = document.getElementById("range7");
+  const range14 = document.getElementById("range14");
+  const range30 = document.getElementById("range30");
 
   let currentTab = "full";
+  let analyticsDays = 7;
+  let chartInstance = null;
 
   tabFull.addEventListener("click", () => { currentTab = "full"; tabFull.classList.add("active"); tabPartial.classList.remove("active"); partialFilters.style.display = "none"; if (getKey()) loadBtn.click(); });
   tabPartial.addEventListener("click", () => { currentTab = "partial"; tabPartial.classList.add("active"); tabFull.classList.remove("active"); partialFilters.style.display = "block"; if (getKey()) loadBtn.click(); });
@@ -157,6 +193,86 @@
     return d.innerHTML;
   }
 
+  function formatDuration(seconds) {
+    if (seconds == null || typeof seconds !== "number" || isNaN(seconds)) return "—";
+    if (seconds < 60) return Math.round(seconds) + "s";
+    if (seconds < 3600) {
+      const m = Math.floor(seconds / 60);
+      const s = Math.round(seconds % 60);
+      return s > 0 ? m + "m " + s + "s" : m + "m";
+    }
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m > 0 ? h + "h " + m + "m" : h + "h";
+  }
+
+  function formatNum(n) {
+    if (n == null || typeof n !== "number" || isNaN(n)) return "—";
+    return n.toLocaleString();
+  }
+
+  async function loadAnalytics() {
+    const key = getKey();
+    if (!key || !analyticsSection) return;
+    analyticsSection.style.display = "block";
+    document.getElementById("cardSubmissions").textContent = "…";
+    document.getElementById("cardViews").textContent = "…";
+    document.getElementById("cardCompletion").textContent = "…";
+    document.getElementById("cardAvgTime").textContent = "…";
+    document.getElementById("dropoffLine").textContent = "";
+    try {
+      const res = await fetch(WORKER_URL + "/api/responses/" + FORM_ID + "/analytics?days=" + analyticsDays, {
+        headers: { Authorization: "Bearer " + key }
+      });
+      if (res.status === 401 || res.status === 403 || res.status === 404) return;
+      if (!res.ok) return;
+      const data = await res.json();
+      const t = data.totals || {};
+      document.getElementById("cardSubmissions").textContent = formatNum(t.submissions);
+      document.getElementById("cardViews").textContent = formatNum(t.views);
+      if (t.submissions != null && t.submissions === 0) {
+        document.getElementById("cardCompletion").textContent = "—";
+        document.getElementById("cardAvgTime").textContent = "—";
+        document.getElementById("dropoffLine").textContent = "No form completions yet";
+      } else {
+        document.getElementById("cardCompletion").textContent =
+          t.completionRate != null && !isNaN(t.completionRate)
+            ? t.completionRate.toFixed(1) + "%"
+            : "—";
+        document.getElementById("cardAvgTime").textContent = formatDuration(t.avgDurationSeconds);
+        const d = data.highestDropoff;
+        document.getElementById("dropoffLine").textContent = d
+          ? 'Highest dropoff: "' + escapeHtml(d.fieldTitle) + '" — ' + formatNum(d.count) + " abandoned"
+          : "No dropoff data yet";
+      }
+      const series = data.series || [];
+      if (chartInstance) chartInstance.destroy();
+      const ctx = document.getElementById("analyticsChart");
+      if (ctx && typeof Chart !== "undefined") {
+        chartInstance = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: series.map(s => s.date),
+            datasets: [
+              { label: "Views", data: series.map(s => s.views), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,0.1)", fill: true },
+              { label: "Submissions", data: series.map(s => s.submissions), borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,0.1)", fill: true }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } },
+            plugins: { legend: { position: "top" } }
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  range7.addEventListener("click", () => { analyticsDays = 7; range7.classList.add("active"); range14.classList.remove("active"); range30.classList.remove("active"); loadAnalytics(); });
+  range14.addEventListener("click", () => { analyticsDays = 14; range14.classList.add("active"); range7.classList.remove("active"); range30.classList.remove("active"); loadAnalytics(); });
+  range30.addEventListener("click", () => { analyticsDays = 30; range30.classList.add("active"); range7.classList.remove("active"); range14.classList.remove("active"); loadAnalytics(); });
+
   loadBtn.addEventListener("click", async () => {
     const key = getKey();
     if (!key) { showError("Enter your API key"); return; }
@@ -175,6 +291,7 @@
       if (currentTab === "partial") responses = filterByEmail(responses, emailFilter.value);
       window._responses = responses;
       renderTable(responses, currentTab === "partial");
+      loadAnalytics();
     } catch (e) {
       showError("Network error: " + (e.message || "Unknown"));
     }
@@ -220,7 +337,7 @@
     }
   });
 
-  if (getKey()) loadBtn.click();
+  if (getKey()) { loadBtn.click(); }
 })();
   </script>
 </body>

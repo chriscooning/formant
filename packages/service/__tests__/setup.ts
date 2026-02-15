@@ -48,5 +48,17 @@ beforeAll(async () => {
     env.DB.prepare(
       "CREATE INDEX IF NOT EXISTS idx_responses_session_id ON responses(session_id)",
     ),
+    env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS form_views_daily (
+        form_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        views INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (form_id, date),
+        FOREIGN KEY (form_id) REFERENCES forms(id)
+      )
+    `),
+    env.DB.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_form_views_daily_form_date ON form_views_daily(form_id, date)",
+    ),
   ]);
 });

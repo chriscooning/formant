@@ -492,3 +492,89 @@ describe("GET /api/responses/:formId/csv", () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ─── GET /api/responses/:formId/analytics ───
+
+describe("GET /api/responses/:formId/analytics", () => {
+  it("returns analytics with totals, series, and highestDropoff", async () => {
+    const form = await createForm();
+    await submitResponse(form.id, { name: "Alice", rating: 5 }, {
+      userAgent: "test",
+      duration: 120,
+    });
+    await submitResponse(form.id, { name: "Bob", rating: 4 }, {
+      userAgent: "test",
+      duration: 90,
+    });
+
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/analytics?days=7`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } },
+    );
+
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as {
+      totals: { views: number; submissions: number; completionRate: number; avgDurationSeconds: number };
+      series: { date: string; views: number; submissions: number }[];
+      highestDropoff: { fieldId: string; fieldTitle: string; count: number } | null;
+    };
+    expect(data.totals).toBeDefined();
+    expect(typeof data.totals.submissions).toBe("number");
+    expect(typeof data.totals.completionRate).toBe("number");
+    expect(typeof data.totals.avgDurationSeconds).toBe("number");
+    expect(Array.isArray(data.series)).toBe(true);
+    expect(data.series.length).toBeGreaterThan(0);
+    expect(data.series[0]).toHaveProperty("date");
+    expect(data.series[0]).toHaveProperty("views");
+    expect(data.series[0]).toHaveProperty("submissions");
+  });
+
+  it("returns 401 without API key", async () => {
+    const form = await createForm();
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/analytics?days=7`,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with wrong API key", async () => {
+    const form = await createForm(API_KEY);
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/analytics?days=7`,
+      { headers: { Authorization: `Bearer ${OTHER_API_KEY}` } },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for nonexistent form", async () => {
+    const res = await SELF.fetch(
+      "http://localhost/api/responses/nonexistent1/analytics?days=7",
+      { headers: { Authorization: `Bearer ${API_KEY}` } },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("accepts days=14 and days=30", async () => {
+    const form = await createForm();
+    const res7 = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/analytics?days=7`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } },
+    );
+    const res14 = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/analytics?days=14`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } },
+    );
+    const res30 = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/analytics?days=30`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } },
+    );
+    expect(res7.status).toBe(200);
+    expect(res14.status).toBe(200);
+    expect(res30.status).toBe(200);
+    const d7 = (await res7.json()) as { series: unknown[] };
+    const d14 = (await res14.json()) as { series: unknown[] };
+    const d30 = (await res30.json()) as { series: unknown[] };
+    expect(d14.series.length).toBeGreaterThanOrEqual(d7.series.length);
+    expect(d30.series.length).toBeGreaterThanOrEqual(d14.series.length);
+  });
+});

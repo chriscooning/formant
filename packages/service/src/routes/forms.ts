@@ -5,6 +5,7 @@ import {
   insertForm,
   getFormById,
   incrementViewCount,
+  incrementViewCountDaily,
   deleteForm,
 } from "../db/queries";
 import { generateFormId } from "../utils/id";
@@ -62,8 +63,13 @@ formsApp.get("/f/:id", async (c) => {
     return c.text("Form not found", 404);
   }
 
-  // Increment view count without blocking the response
-  c.executionCtx.waitUntil(incrementViewCount(c.env.DB, id));
+  // Increment view count (total + daily) without blocking the response
+  c.executionCtx.waitUntil(
+    Promise.all([
+      incrementViewCount(c.env.DB, id),
+      incrementViewCountDaily(c.env.DB, id),
+    ]),
+  );
 
   return c.html(form.html, 200, {
     "Cache-Control": "public, max-age=60, stale-while-revalidate=300",

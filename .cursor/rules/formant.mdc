@@ -11,7 +11,7 @@ Self-contained form generation system. Forms are single HTML files. Monorepo wit
 
 ## Before Writing Code
 
-1. Read the relevant phase plan file in `plans/` — it is your spec
+1. Read the relevant phase plan file in `plans/` or `plans/archive/` — it is your spec
 2. Read `plans/STATUS.md` to understand what's already built
 3. Read existing code in files you're about to modify — never overwrite blindly
 4. If a previous phase left something broken, flag it in STATUS.md but don't silently fix unrelated code

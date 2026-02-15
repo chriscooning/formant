@@ -77,6 +77,19 @@ export async function incrementViewCount(
     .run();
 }
 
+export async function incrementViewCountDaily(
+  db: D1Database,
+  formId: string,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO form_views_daily (form_id, date, views) VALUES (?, date('now'), 1)
+       ON CONFLICT(form_id, date) DO UPDATE SET views = views + 1`,
+    )
+    .bind(formId)
+    .run();
+}
+
 export async function incrementSubmitCount(
   db: D1Database,
   id: string,
@@ -260,4 +273,182 @@ export async function getAllResponsesForExport(
     .bind(formId, status)
     .all<ResponseRow>();
   return result.results;
+}
+
+// ─── Analytics ───
+
+export interface AnalyticsResult {
+  totals: {
+    views: number;
+    submissions: number;
+    completionRate: number;
+    avgDurationSeconds: number;
+  };
+  series: { date: string; views: number; submissions: number }[];
+  highestDropoff: {
+    fieldId: string;
+    fieldTitle: string;
+    count: number;
+  } | null;
+}
+
+export async function getAnalytics(
+  db: D1Database,
+  formId: string,
+  days: 7 | 14 | 30,
+): Promise<AnalyticsResult> {
+  const form = await getFormById(db, formId);
+  if (!form) {
+    throw new Error("Form not found");
+  }
+
+  const dateMod = `-${days} days`;
+  const startDate = (
+    await db
+      .prepare("SELECT date('now', ?) as d")
+      .bind(dateMod)
+      .first<{ d: string }>()
+  )?.d;
+
+  if (!startDate) {
+    throw new Error("Failed to compute start date");
+  }
+
+  const schema = (() => {
+    try {
+      return JSON.parse(form.schema_json) as { fields?: Array<{ id: string; title?: string }> };
+    } catch {
+      return { fields: [] };
+    }
+  })();
+
+  const fieldTitleMap = new Map<string, string>();
+  for (const f of schema.fields ?? []) {
+    if (f?.id) fieldTitleMap.set(f.id, f.title ?? f.id);
+  }
+
+  // Totals: views from forms, submissions from submit_count
+  const views = form.view_count;
+  const submissions = form.submit_count;
+
+  // Completed and partial counts in range
+  const completedInRange = await db
+    .prepare(
+      `SELECT COUNT(*) as n FROM responses WHERE form_id = ? AND status = 'completed'
+       AND date(submitted_at) >= ?`,
+    )
+    .bind(formId, startDate)
+    .first<{ n: number }>();
+
+  const partialsInRange = await db
+    .prepare(
+      `SELECT COUNT(*) as n FROM responses WHERE form_id = ? AND status = 'in_progress'
+       AND date(COALESCE(updated_at, submitted_at)) >= ?`,
+    )
+    .bind(formId, startDate)
+    .first<{ n: number }>();
+
+  const completedCount = completedInRange?.n ?? 0;
+  const partialCount = partialsInRange?.n ?? 0;
+  const totalStarted = completedCount + partialCount;
+  const completionRate =
+    totalStarted > 0 ? (completedCount / totalStarted) * 100 : 0;
+
+  // Avg duration from completed in range
+  const durationRows = await db
+    .prepare(
+      `SELECT metadata_json FROM responses WHERE form_id = ? AND status = 'completed'
+       AND date(submitted_at) >= ? AND metadata_json IS NOT NULL`,
+    )
+    .bind(formId, startDate)
+    .all<{ metadata_json: string | null }>();
+
+  let totalDuration = 0;
+  let durationCount = 0;
+  for (const row of durationRows.results) {
+    if (!row.metadata_json) continue;
+    try {
+      const meta = JSON.parse(row.metadata_json) as { duration?: number };
+      if (typeof meta.duration === "number") {
+        totalDuration += meta.duration;
+        durationCount++;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  const avgDurationSeconds = durationCount > 0 ? totalDuration / durationCount : 0;
+
+  // Series: views and submissions per date
+  const viewsByDate = await db
+    .prepare(
+      `SELECT date, views FROM form_views_daily WHERE form_id = ? AND date >= ? ORDER BY date`,
+    )
+    .bind(formId, startDate)
+    .all<{ date: string; views: number }>();
+
+  const submissionsByDate = await db
+    .prepare(
+      `SELECT date(submitted_at) as date, COUNT(*) as n FROM responses
+       WHERE form_id = ? AND status = 'completed' AND date(submitted_at) >= ?
+       GROUP BY date(submitted_at) ORDER BY date`,
+    )
+    .bind(formId, startDate)
+    .all<{ date: string; n: number }>();
+
+  const viewsMap = new Map<string, number>();
+  for (const r of viewsByDate.results) viewsMap.set(r.date, r.views);
+  const subsMap = new Map<string, number>();
+  for (const r of submissionsByDate.results) subsMap.set(r.date, r.n);
+
+  const series: { date: string; views: number; submissions: number }[] = [];
+  const today = (
+    await db.prepare("SELECT date('now') as d").first<{ d: string }>()
+  )?.d;
+  if (today) {
+    const start = new Date(startDate);
+    const end = new Date(today);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10);
+      series.push({
+        date: dateStr,
+        views: viewsMap.get(dateStr) ?? 0,
+        submissions: subsMap.get(dateStr) ?? 0,
+      });
+    }
+  }
+
+  // Highest dropoff: partials grouped by lastFieldId
+  const dropoffRow = await db
+    .prepare(
+      `SELECT json_extract(metadata_json, '$.lastFieldId') as field_id, COUNT(*) as cnt
+       FROM responses WHERE form_id = ? AND status = 'in_progress'
+       AND date(COALESCE(updated_at, submitted_at)) >= ?
+       AND json_extract(metadata_json, '$.lastFieldId') IS NOT NULL
+       GROUP BY json_extract(metadata_json, '$.lastFieldId')
+       ORDER BY cnt DESC LIMIT 1`,
+    )
+    .bind(formId, startDate)
+    .first<{ field_id: string; cnt: number }>();
+
+  let highestDropoff: AnalyticsResult["highestDropoff"] = null;
+  if (dropoffRow?.field_id) {
+    const fieldTitle = fieldTitleMap.get(dropoffRow.field_id) ?? dropoffRow.field_id;
+    highestDropoff = {
+      fieldId: dropoffRow.field_id,
+      fieldTitle,
+      count: dropoffRow.cnt,
+    };
+  }
+
+  return {
+    totals: {
+      views,
+      submissions,
+      completionRate,
+      avgDurationSeconds,
+    },
+    series,
+    highestDropoff,
+  };
 }

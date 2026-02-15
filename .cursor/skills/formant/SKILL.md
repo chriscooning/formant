@@ -40,9 +40,9 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 | **Cloudflare** | Production: hosting + response DB in one place | Built-in D1 database + API + XLSX/CSV export | `pnpm deploy <form.html> --target cloudflare` |
 
 - **Offline**: Opens the form in the default browser. Responses download as Excel on submit. No hosting needed.
-- **Local**: Build with `--local` produces `forms/<name>.html` (form) and `forms/<name>-admin.html` (admin panel). Requires `FORMANT_ADMIN_PASSWORD` in env or `--admin-password <p>`. Form stores responses in IndexedDB; admin reads from IndexedDB, password gate, CSV/XLSX export. Copy both files to the device (same folder for IndexedDB origin). Open form for kiosk, admin for export.
+- **Local**: Build with `--local` produces `forms/<name>.html` (form) and `forms/<name>-admin.html` (admin panel). Requires `FORMANT_ADMIN_PASSWORD` in env or `--admin-password <p>`. Form stores responses in IndexedDB; admin reads from IndexedDB, password gate, analytics (submissions chart, completion rate, avg time, highest dropoff; no views), CSV/XLSX export. Copy both files to the device (same folder for IndexedDB origin). Open form for kiosk, admin for export.
 - **Vercel**: Deploys as a static site with a public URL. Optionally set up Google Sheets for response collection (the script walks through it).
-- **Cloudflare**: Deploys a Cloudflare Worker with D1 database. Forms are uploaded via API, responses are collected server-side, and XLSX/CSV export endpoints are available. A local dashboard is created at `forms/<name>-dashboard.html` — open it, paste your API key, and view or export responses (CSV or XLSX). First-time setup creates the database and runs migrations automatically.
+- **Cloudflare**: Deploys a Cloudflare Worker with D1 database. Forms are uploaded via API, responses are collected server-side, and XLSX/CSV export endpoints are available. A local dashboard is created at `forms/<name>-dashboard.html` — open it, paste your API key, and view responses, analytics (chart of views + submissions, 7/14/30 day range, completion rate, avg time, highest dropoff), and export (CSV or XLSX). First-time setup creates the database and runs migrations automatically.
 
 Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
 

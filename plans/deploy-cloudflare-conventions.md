@@ -18,6 +18,7 @@ Include the dashboard path in the deploy output: `Dashboard: forms/<name>-dashbo
 Management endpoints use these paths:
 
 - List responses: `GET /api/responses/:formId`
+- Analytics: `GET /api/responses/:formId/analytics?days=7|14|30`
 - Export XLSX: `GET /api/responses/:formId/xlsx`
 - Export CSV: `GET /api/responses/:formId/csv`
 - Delete form: `DELETE /api/forms/:id`

@@ -23,6 +23,7 @@ Track which phases are complete. Each agent session should read this first and u
 | 5B | Admin Panel (Local Mode) | **complete** | admin-local.html template, password gate, CSV/XLSX, verify script |
 | 5C | Build Integration (--local) | **complete** | CLI --local, admin password from env, form + admin output |
 | 6 | Partial Fills Capture | **complete** | Session-based partials, Full/Partial tabs, email filter, deduplication |
+| 7 | Dashboard Analytics | **complete** | Chart (views + submissions), big numbers, 7/14/30 day range, highest dropoff; local admin partial analytics |
 
 ## Execution Order
 
