@@ -5,6 +5,7 @@ import { submitToService } from "./service";
 import { downloadExcel } from "./excel";
 import { completePartialToLocal } from "./local";
 import { getSessionId } from "../utils/sessionId";
+import { getStoredSheetsUrl } from "../utils/sheetsStorage";
 
 export interface SubmitResult {
   destination: string;
@@ -23,7 +24,14 @@ export async function submitResponses(
   metadata: object,
   options?: SubmitOptions
 ): Promise<SubmitResult[]> {
-  const destinations = schema.submit?.destinations ?? [];
+  const storedSheets = await getStoredSheetsUrl(schema.id ?? "form");
+  const baseDestinations = schema.submit?.destinations ?? [];
+  const sheetsDest = storedSheets?.url
+    ? { type: "sheets" as const, url: storedSheets.url }
+    : null;
+  const destinations = sheetsDest
+    ? [...baseDestinations.filter((d) => d.type !== "sheets"), sheetsDest]
+    : baseDestinations;
 
   if (destinations.length === 0) {
     return [];

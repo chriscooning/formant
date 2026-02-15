@@ -40,6 +40,10 @@
     .analytics-card .label { font-size: 0.75rem; color: #666; margin-bottom: 0.25rem; }
     .analytics-card .value { font-size: 1.25rem; font-weight: 600; }
     .analytics-dropoff { font-size: 0.875rem; color: #555; margin-bottom: 0.5rem; }
+    .sheets-connect { margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ccc; background: #fafafa; }
+    .sheets-connect button { padding: 0.5rem 1rem; cursor: pointer; }
+    .sheets-connect .connected { color: #16a34a; }
+    .sheets-connect .sheets-link { margin-left: 0.5rem; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
@@ -69,6 +73,9 @@
         <div class="analytics-card"><div class="label">Avg Completion Time</div><div class="value" id="cardAvgTime">—</div></div>
       </div>
       <div class="analytics-dropoff" id="dropoffLine"></div>
+    </div>
+    <div id="sheetsConnectSection" class="sheets-connect" style="display:none;">
+      <div id="sheetsConnectContent"></div>
     </div>
     <div class="tabs">
       <button type="button" id="tabFull" class="active">Full submissions</button>
@@ -105,6 +112,7 @@
 (function() {
   const FORM_ID = "{{FORM_ID}}";
   const ADMIN_PASSWORD_HASH = "{{ADMIN_PASSWORD_HASH}}";
+  const FORMANT_API_URL = "{{FORMANT_API_URL}}";
 
   const schemaEl = document.getElementById("schema-json");
   const SCHEMA_JSON = schemaEl ? (function(){ try { return JSON.parse(schemaEl.textContent || "{}"); } catch(e){ return {}; } })() : {};
@@ -171,7 +179,7 @@
     try { sessionStorage.setItem(SESSION_KEY, unlocked ? "1" : ""); } catch (_) {}
     passwordGate.style.display = unlocked ? "none" : "flex";
     mainContent.style.display = unlocked ? "block" : "none";
-    if (unlocked) loadBtn.click();
+    if (unlocked) { loadBtn.click(); renderSheetsSection(); }
   }
 
   unlockBtn.addEventListener("click", async () => {
@@ -188,6 +196,84 @@
   tabFull.addEventListener("click", () => { currentTab = "full"; tabFull.classList.add("active"); tabPartial.classList.remove("active"); partialFilters.style.display = "none"; loadBtn.click(); });
   tabPartial.addEventListener("click", () => { currentTab = "partial"; tabPartial.classList.add("active"); tabFull.classList.remove("active"); partialFilters.style.display = "block"; loadBtn.click(); });
   emailFilter.addEventListener("change", () => loadBtn.click());
+
+  const SHEETS_DB = "formant_sheets_config";
+  const SHEETS_STORE = "urls";
+  function openSheetsDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(SHEETS_DB, 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+      req.onupgradeneeded = (e) => { e.target.result.createObjectStore(SHEETS_STORE, { keyPath: "formId" }); };
+    });
+  }
+  async function getStoredSheetsUrl(formId) {
+    try {
+      const db = await openSheetsDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(SHEETS_STORE, "readonly");
+        const req = tx.objectStore(SHEETS_STORE).get(formId);
+        req.onsuccess = () => { db.close(); resolve(req.result || null); };
+        req.onerror = () => { db.close(); resolve(null); };
+      });
+    } catch { return null; }
+  }
+  async function setStoredSheetsUrl(formId, config) {
+    const db = await openSheetsDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(SHEETS_STORE, "readwrite");
+      tx.objectStore(SHEETS_STORE).put({ formId, url: config.url, spreadsheetUrl: config.spreadsheetUrl, connectedAt: config.connectedAt || new Date().toISOString() });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  }
+  async function handleSheetsCallback() {
+    const hash = (location.hash || "").replace(/^#/, "");
+    if (!hash) return;
+    const params = Object.fromEntries(new URLSearchParams(hash));
+    const url = params.url;
+    const spreadsheetUrl = params.spreadsheetUrl;
+    const formId = params.formId;
+    if (url && formId) {
+      await setStoredSheetsUrl(formId, { url, spreadsheetUrl });
+      history.replaceState(null, "", location.pathname);
+      if (formId === FORM_ID && isUnlocked()) renderSheetsSection();
+    }
+    const err = params.error;
+    if (err && isUnlocked()) { showError("Connect failed: " + (params.message || err)); }
+  }
+  async function renderSheetsSection() {
+    const section = document.getElementById("sheetsConnectSection");
+    const content = document.getElementById("sheetsConnectContent");
+    if (!FORMANT_API_URL || !FORMANT_API_URL.trim()) { section.style.display = "none"; return; }
+    const isFile = location.protocol === "file:";
+    if (isFile) {
+      section.style.display = "block";
+      content.innerHTML = '<span class="error">Connect Google Sheet requires serving over HTTP. Run <code>npx serve .</code> in this folder.</span>';
+      return;
+    }
+    const stored = await getStoredSheetsUrl(FORM_ID);
+    section.style.display = "block";
+    if (stored) {
+      content.innerHTML = '<span class="connected">Connected.</span><a class="sheets-link" href="' + (stored.spreadsheetUrl || "#") + '" target="_blank" rel="noopener">View in Google Sheet</a>';
+    } else {
+      content.innerHTML = '<button type="button" id="connectSheetsBtn">Connect Google Sheet</button>';
+      document.getElementById("connectSheetsBtn").addEventListener("click", async () => {
+        try {
+          const redirectUri = location.origin + location.pathname;
+          const res = await fetch(FORMANT_API_URL.replace(/\/$/, "") + "/api/connect-sheets/init", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ redirect_uri: redirectUri, form_id: FORM_ID, schema: SCHEMA_JSON })
+          });
+          if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || res.statusText); }
+          const data = await res.json();
+          if (data.auth_url) location.href = data.auth_url;
+          else throw new Error("No auth URL");
+        } catch (e) { showError("Connect failed: " + (e.message || "Unknown")); }
+      });
+    }
+  }
 
   const DB_NAME = "formant_local";
   const STORE_NAME = "responses";
@@ -498,7 +584,9 @@
     downloadBlob(new Blob([XLSX.write(wb, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "responses.xlsx");
   });
 
-  if (isUnlocked()) setUnlocked(true);
+  handleSheetsCallback().then(function() {
+    if (isUnlocked()) setUnlocked(true);
+  });
 })();
   </script>
 </body>

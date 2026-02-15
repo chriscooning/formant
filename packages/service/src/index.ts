@@ -3,10 +3,13 @@ import { corsMiddleware } from "./middleware/cors";
 import { formsApp } from "./routes/forms";
 import { responsesApp } from "./routes/responses";
 import { exportApp } from "./routes/export";
+import { connectSheetsApp } from "./routes/connect-sheets";
 import type { AppEnv } from "./types";
 
 // Re-export types for consumer convenience
 export type { Bindings, Variables, AppEnv } from "./types";
+export type { DbAdapter, FormRow, ResponseRow, AnalyticsResult } from "./db/interface";
+export { D1Adapter } from "./db/d1-adapter";
 
 // ─── App ───
 
@@ -22,5 +25,6 @@ app.get("/api/health", (c) => c.json({ status: "ok" }));
 app.route("/", formsApp);
 app.route("/", responsesApp);
 app.route("/", exportApp);
+app.route("/", connectSheetsApp);
 
 export default app;

@@ -1,27 +1,7 @@
 // ─── Database Row Types ───
-
-export interface FormRow {
-  id: string;
-  title: string | null;
-  html: string;
-  schema_json: string;
-  api_key_hash: string | null;
-  created_at: string;
-  updated_at: string;
-  view_count: number;
-  submit_count: number;
-}
-
-export interface ResponseRow {
-  id: string;
-  form_id: string;
-  answers_json: string;
-  metadata_json: string | null;
-  submitted_at: string;
-  status: string;
-  session_id: string | null;
-  updated_at: string | null;
-}
+// Re-export from interface for backward compatibility
+import type { FormRow, ResponseRow } from "./interface";
+export type { FormRow, ResponseRow, AnalyticsResult } from "./interface";
 
 // ─── Form Queries ───
 
@@ -277,20 +257,7 @@ export async function getAllResponsesForExport(
 
 // ─── Analytics ───
 
-export interface AnalyticsResult {
-  totals: {
-    views: number;
-    submissions: number;
-    completionRate: number;
-    avgDurationSeconds: number;
-  };
-  series: { date: string; views: number; submissions: number }[];
-  highestDropoff: {
-    fieldId: string;
-    fieldTitle: string;
-    count: number;
-  } | null;
-}
+import type { AnalyticsResult } from "./interface";
 
 export async function getAnalytics(
   db: D1Database,

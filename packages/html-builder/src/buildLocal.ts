@@ -15,10 +15,12 @@ const TEMPLATE_PATH = path.resolve(
 /**
  * Build admin panel HTML for local mode.
  * Reads admin-local template and replaces placeholders.
+ * @param formantApiUrl - Base URL of Formant API for Connect Google Sheet (e.g. https://api.formant.dev). Empty hides Connect UI.
  */
 export function buildAdminHTML(
   schema: FormSchema,
   adminPasswordHash: string,
+  formantApiUrl = "",
 ): string {
   let template: string;
   try {
@@ -45,7 +47,8 @@ export function buildAdminHTML(
     .replace(/\{\{FORM_ID\}\}/g, formId)
     .replace(/\{\{FORM_TITLE\}\}/g, formTitle)
     .replace(/\{\{SCHEMA_JSON\}\}/, schemaJSON)
-    .replace(/\{\{ADMIN_PASSWORD_HASH\}\}/g, adminPasswordHash);
+    .replace(/\{\{ADMIN_PASSWORD_HASH\}\}/g, adminPasswordHash)
+    .replace(/\{\{FORMANT_API_URL\}\}/g, formantApiUrl);
 }
 
 /**

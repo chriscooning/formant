@@ -2,10 +2,6 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import type { AppEnv } from "../types";
 import { requireAuth } from "../middleware/auth";
-import {
-  getFormById,
-  getAllResponsesForExport,
-} from "../db/queries";
 import { buildXlsx } from "../utils/xlsx";
 import { buildCsv } from "../utils/csv";
 
@@ -15,11 +11,11 @@ async function getFormAndResponses(c: Context<AppEnv>) {
   const formId = c.req.param("formId");
   const apiKeyHash = c.get("apiKeyHash");
 
-  const form = await getFormById(c.env.DB, formId);
+  const form = await c.env.db.getFormById(formId);
   if (!form) return { error: "not_found" as const };
   if (form.api_key_hash !== apiKeyHash) return { error: "forbidden" as const };
 
-  const responses = await getAllResponsesForExport(c.env.DB, formId);
+  const responses = await c.env.db.getAllResponsesForExport(formId);
   let schema: Record<string, unknown>;
   try {
     schema = JSON.parse(form.schema_json) as Record<string, unknown>;

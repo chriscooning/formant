@@ -24,6 +24,11 @@ Track which phases are complete. Each agent session should read this first and u
 | 5C | Build Integration (--local) | **complete** | CLI --local, admin password from env, form + admin output |
 | 6 | Partial Fills Capture | **complete** | Session-based partials, Full/Partial tabs, email filter, deduplication |
 | 7 | Dashboard Analytics | **complete** | Chart (views + submissions), big numbers, 7/14/30 day range, highest dropoff; local admin partial analytics |
+| 8A | Shared API layer + DB abstraction | **complete** | DbAdapter interface, D1Adapter, routes use adapter |
+| 8B | Vercel adapter + Postgres | **pending** | Depends on 8A |
+| 8C | Deploy script + form integration | **pending** | Depends on 8B |
+| 8D | Testing parity + documentation | **pending** | Depends on 8C |
+| 9 | Connect Google Sheet OAuth | **complete** | Backend routes, admin UI, sheetsStorage, submit handler. Prereqs: GCP OAuth + secrets |
 
 ## Execution Order
 
@@ -42,6 +47,9 @@ Parallel opportunities (can start once their dependency is met):
 5A can start after 1E-2
 5B can start after 5A
 5C can start after 5B
+8A can start after 3A + 3B + 7
+8B → 8C → 8D (sequential, Vercel backend)
+9 can start after 5B + 3B (admin panel + service API)
 ```
 
 ## Issues Log

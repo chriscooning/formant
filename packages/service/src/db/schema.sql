@@ -41,3 +41,14 @@ CREATE TABLE IF NOT EXISTS form_views_daily (
   FOREIGN KEY (form_id) REFERENCES forms(id)
 );
 CREATE INDEX IF NOT EXISTS idx_form_views_daily_form_date ON form_views_daily(form_id, date);
+
+-- OAuth sessions for Connect Google Sheet (short-lived, one-time use)
+CREATE TABLE IF NOT EXISTS oauth_sessions (
+  state TEXT PRIMARY KEY,
+  form_id TEXT NOT NULL,
+  schema_json TEXT NOT NULL,
+  redirect_uri TEXT NOT NULL,
+  code_verifier TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_sessions_created_at ON oauth_sessions(created_at);

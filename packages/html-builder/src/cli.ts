@@ -176,7 +176,8 @@ function buildForm(argv: string[]): string {
       adminPassword ?? process.env.FORMANT_ADMIN_PASSWORD ?? "";
     const adminHash = hashAdminPassword(adminPasswordResolved);
     const adminSchema = schema as FormSchema;
-    const adminHtml = buildAdminHTML(adminSchema, adminHash);
+    const formantApiUrl = process.env.FORMANT_API_URL ?? "";
+    const adminHtml = buildAdminHTML(adminSchema, adminHash, formantApiUrl);
     const adminOutPath = outPath.replace(/\.html$/, "-admin.html");
     fs.writeFileSync(adminOutPath, adminHtml);
     const adminSizeKB = (Buffer.byteLength(adminHtml) / 1024).toFixed(1);

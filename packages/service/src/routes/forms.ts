@@ -1,13 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { requireAuth } from "../middleware/auth";
-import {
-  insertForm,
-  getFormById,
-  incrementViewCount,
-  incrementViewCountDaily,
-  deleteForm,
-} from "../db/queries";
 import { generateFormId } from "../utils/id";
 
 const formsApp = new Hono<AppEnv>();
@@ -35,7 +28,7 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
   const apiKeyHash = c.get("apiKeyHash");
   const schemaObj = schema as Record<string, unknown>;
 
-  const form = await insertForm(c.env.DB, {
+  const form = await c.env.db.insertForm({
     id,
     title: typeof schemaObj.title === "string" ? schemaObj.title : null,
     html: html as string,
@@ -57,7 +50,7 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
 
 formsApp.get("/f/:id", async (c) => {
   const id = c.req.param("id");
-  const form = await getFormById(c.env.DB, id);
+  const form = await c.env.db.getFormById(id);
 
   if (!form) {
     return c.text("Form not found", 404);
@@ -66,8 +59,8 @@ formsApp.get("/f/:id", async (c) => {
   // Increment view count (total + daily) without blocking the response
   c.executionCtx.waitUntil(
     Promise.all([
-      incrementViewCount(c.env.DB, id),
-      incrementViewCountDaily(c.env.DB, id),
+      c.env.db.incrementViewCount(id),
+      c.env.db.incrementViewCountDaily(id),
     ]),
   );
 
@@ -82,7 +75,7 @@ formsApp.delete("/api/forms/:id", requireAuth(), async (c) => {
   const id = c.req.param("id");
   const apiKeyHash = c.get("apiKeyHash");
 
-  const form = await getFormById(c.env.DB, id);
+  const form = await c.env.db.getFormById(id);
   if (!form) {
     return c.json({ error: "Form not found" }, 404);
   }
@@ -92,7 +85,7 @@ formsApp.delete("/api/forms/:id", requireAuth(), async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  await deleteForm(c.env.DB, id);
+  await c.env.db.deleteForm(id);
   return c.json({ success: true });
 });
 
