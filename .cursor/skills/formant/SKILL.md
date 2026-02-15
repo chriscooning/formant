@@ -9,7 +9,14 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 
 ## End-to-End Workflow
 
-1. **Ask** what the user wants to collect (questions, branching, where responses go)
+1. **Ask** what the user wants to collect **before** generating the schema:
+   - **Questions and branching logic** — what to ask, in what order, any conditional flows
+   - **Response collection** — where should responses go?
+     - **Excel download** (default, client-side) — works everywhere, no setup
+     - **Google Sheets** — requires `scripts/setup-sheets.sh`
+     - **Webhook** — POST to a URL (Zapier, Slack, custom API)
+     - **Cloudflare D1** — requires Cloudflare deploy for server-side storage
+     - Always include Excel as a fallback unless the user explicitly opts out.
 2. **Generate** a valid FormSchema JSON
 3. **Save** to `forms/<name>.json`
 4. **Build** by running:
@@ -17,10 +24,11 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
    pnpm formant build forms/<name>.json -o forms/<name>.html
    ```
    This produces both `forms/<name>.html` and `forms/<name>.json` (schema copy).
-5. **Ask** the user: "How would you like to use this form?" then deploy:
-   - **Offline** — just try it or email the HTML file
+5. **Ask** the user: "How would you like to host this form?" — offline, Vercel, or Cloudflare.
+   - **Offline** — open in browser or email the HTML file
    - **Vercel** — shareable public URL, no server needed
-   - **Cloudflare** — hosting + built-in response collection (recommended for production)
+   - **Cloudflare** — hosting + built-in D1 response collection (recommended if they chose Cloudflare for responses)
+   - Hosting is separate from response collection: Excel and Sheets work on all targets. If they chose Cloudflare D1 for responses, recommend Cloudflare deploy.
 
 ## Deploy Options
 
@@ -72,6 +80,21 @@ Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
   "theme": { "accent": "#6c5ce7", "defaultMode": "auto" }
 }
 ```
+
+## Response Collection
+
+**Ask before generating the schema.** Do not default to Excel without asking. Explicitly ask: *"Where should responses go?"*
+
+| Option | Schema mapping | Notes |
+|--------|----------------|-------|
+| Excel download | `{ "type": "excel" }` | Client-side XLSX. Works on all hosting targets. |
+| Google Sheets | `{ "type": "sheets", "url": "..." }` | Requires `scripts/setup-sheets.sh` |
+| Webhook | `{ "type": "webhook", "url": "..." }` | POST JSON to any URL |
+| Cloudflare D1 | `{ "type": "service", ... }` | Requires Cloudflare deploy |
+
+**Rule:** Always include Excel in `submit.destinations` unless the user explicitly opts out. Multiple destinations fire in parallel.
+
+**Example:** *"I'll need a few details before building. What questions do you want to ask, and where should responses go — Excel download, Google Sheets, a webhook URL, or Cloudflare D1? I'll include Excel as a fallback unless you prefer otherwise."*
 
 ## Submit Destinations
 
