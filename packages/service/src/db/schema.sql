@@ -20,9 +20,14 @@ CREATE TABLE IF NOT EXISTS responses (
   form_id TEXT NOT NULL REFERENCES forms(id),
   answers_json TEXT NOT NULL,              -- The answers object as JSON
   metadata_json TEXT,                      -- User agent, duration, etc.
-  submitted_at TEXT DEFAULT (datetime('now'))
+  submitted_at TEXT DEFAULT (datetime('now')),
+  status TEXT NOT NULL DEFAULT 'completed', -- 'in_progress' | 'completed'
+  session_id TEXT,                         -- For partials (session-based upsert)
+  updated_at TEXT DEFAULT (datetime('now'))
 );
 
 -- Index for fast response queries by form
 CREATE INDEX IF NOT EXISTS idx_responses_form_id ON responses(form_id);
 CREATE INDEX IF NOT EXISTS idx_responses_submitted_at ON responses(submitted_at);
+CREATE INDEX IF NOT EXISTS idx_responses_status ON responses(status);
+CREATE INDEX IF NOT EXISTS idx_responses_session_id ON responses(session_id);

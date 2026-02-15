@@ -3,7 +3,8 @@ import { submitToSheets } from "./sheets";
 import { submitToWebhook } from "./webhook";
 import { submitToService } from "./service";
 import { downloadExcel } from "./excel";
-import { saveToLocal } from "./local";
+import { completePartialToLocal } from "./local";
+import { getSessionId } from "../utils/sessionId";
 
 export interface SubmitResult {
   destination: string;
@@ -11,10 +12,16 @@ export interface SubmitResult {
   error?: string;
 }
 
+export interface SubmitOptions {
+  /** When set, service destination will PUT to update existing response instead of POST */
+  responseId?: string | null;
+}
+
 export async function submitResponses(
   schema: FormSchema,
   answers: Record<string, unknown>,
-  metadata: object
+  metadata: object,
+  options?: SubmitOptions
 ): Promise<SubmitResult[]> {
   const destinations = schema.submit?.destinations ?? [];
 
@@ -45,7 +52,7 @@ export async function submitResponses(
 
         case "service": {
           const endpoint = dest.endpoint ?? "";
-          await submitToService(dest.formId, endpoint, response);
+          await submitToService(dest.formId, endpoint, response, options?.responseId);
           return { destination: "service", success: true };
         }
 
@@ -54,7 +61,7 @@ export async function submitResponses(
           return { destination: "excel", success: true };
 
         case "local":
-          await saveToLocal(schema.id, response);
+          await completePartialToLocal(schema.id, getSessionId(), response);
           return { destination: "local", success: true };
 
         default:

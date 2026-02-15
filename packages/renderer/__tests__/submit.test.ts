@@ -2,11 +2,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { submitResponses } from "../src/submit/handler";
 import { submitToWebhook } from "../src/submit/webhook";
 import { flattenForSheets } from "../src/submit/sheets";
-import { saveToLocal } from "../src/submit/local";
+import { completePartialToLocal } from "../src/submit/local";
+import { getSessionId } from "../src/utils/sessionId";
 import type { FormSchema, FormResponse } from "@formant/core";
 
 vi.mock("../src/submit/local", () => ({
-  saveToLocal: vi.fn().mockResolvedValue(undefined),
+  completePartialToLocal: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../src/utils/sessionId", () => ({
+  getSessionId: vi.fn().mockReturnValue("test-session-id"),
 }));
 
 // ─── Mock fetch globally ───
@@ -16,7 +21,7 @@ const mockFetch = vi.fn();
 beforeEach(() => {
   vi.stubGlobal("fetch", mockFetch);
   mockFetch.mockReset();
-  vi.mocked(saveToLocal).mockClear();
+  vi.mocked(completePartialToLocal).mockClear();
 });
 
 afterEach(() => {
@@ -217,7 +222,7 @@ describe("submitResponses", () => {
     createElementSpy.mockRestore();
   });
 
-  it("with local destination calls saveToLocal and returns success (no Excel download)", async () => {
+  it("with local destination calls completePartialToLocal and returns success (no Excel download)", async () => {
     const schema: FormSchema = {
       ...baseSchema,
       submit: {
@@ -231,9 +236,10 @@ describe("submitResponses", () => {
     expect(results[0]?.destination).toBe("local");
     expect(results[0]?.success).toBe(true);
 
-    expect(saveToLocal).toHaveBeenCalledOnce();
-    expect(saveToLocal).toHaveBeenCalledWith(
+    expect(completePartialToLocal).toHaveBeenCalledOnce();
+    expect(completePartialToLocal).toHaveBeenCalledWith(
       "test-form",
+      "test-session-id",
       expect.objectContaining({
         formId: "test-form",
         status: "completed",
@@ -242,7 +248,7 @@ describe("submitResponses", () => {
       })
     );
 
-    // No fetch, no Excel download
+    expect(getSessionId).toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 

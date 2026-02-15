@@ -30,7 +30,10 @@ beforeAll(async () => {
         form_id TEXT NOT NULL REFERENCES forms(id),
         answers_json TEXT NOT NULL,
         metadata_json TEXT,
-        submitted_at TEXT DEFAULT (datetime('now'))
+        submitted_at TEXT DEFAULT (datetime('now')),
+        status TEXT NOT NULL DEFAULT 'completed',
+        session_id TEXT,
+        updated_at TEXT DEFAULT (datetime('now'))
       )
     `),
     env.DB.prepare(
@@ -38,6 +41,12 @@ beforeAll(async () => {
     ),
     env.DB.prepare(
       "CREATE INDEX IF NOT EXISTS idx_responses_submitted_at ON responses(submitted_at)",
+    ),
+    env.DB.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_responses_status ON responses(status)",
+    ),
+    env.DB.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_responses_session_id ON responses(session_id)",
     ),
   ]);
 });

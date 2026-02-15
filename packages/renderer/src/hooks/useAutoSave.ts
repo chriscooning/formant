@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import type { FormSchema, EngineState, ServiceDestination } from "@formant/core";
+import { getSessionId } from "../utils/sessionId";
 
 export interface UseAutoSaveConfig {
   schema: FormSchema;
@@ -87,18 +88,22 @@ export function useAutoSave(config: UseAutoSaveConfig): UseAutoSaveReturn {
             }
           );
         } else {
-          // Create new response
+          // Create new response (one POST per session)
           const res = await fetch(`${endpoint}/api/responses/${formId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              ...payload,
+              sessionId: getSessionId(),
+            }),
           });
 
           if (res.ok) {
-            const data = (await res.json()) as { responseId?: string };
-            if (data.responseId) {
-              responseIdRef.current = data.responseId;
-              setResponseId(data.responseId);
+            const data = (await res.json()) as { responseId?: string; id?: string };
+            const id = data.responseId ?? data.id;
+            if (id) {
+              responseIdRef.current = id;
+              setResponseId(id);
             }
           }
         }

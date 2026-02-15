@@ -11,6 +11,11 @@
     .auth { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
     .auth input { flex: 1; max-width: 400px; padding: 0.5rem; }
     .auth button { padding: 0.5rem 1rem; cursor: pointer; }
+    .tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
+    .tabs button { padding: 0.5rem 1rem; cursor: pointer; border: 1px solid #ccc; background: #f5f5f5; }
+    .tabs button.active { background: #fff; border-bottom-color: #fff; margin-bottom: -1px; }
+    .partial-filters { margin-bottom: 0.5rem; }
+    .partial-filters select { padding: 0.25rem 0.5rem; }
     .actions { margin-bottom: 1rem; }
     .actions button { margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
     table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
@@ -27,6 +32,19 @@
   <div class="auth">
     <input type="password" id="apiKey" placeholder="Paste your API key" autocomplete="off">
     <button type="button" id="loadBtn">Load responses</button>
+  </div>
+
+  <div class="tabs">
+    <button type="button" id="tabFull" class="active">Full submissions</button>
+    <button type="button" id="tabPartial">Partial submissions</button>
+  </div>
+  <div id="partialFilters" class="partial-filters" style="display:none;">
+    <label>Filter: </label>
+    <select id="emailFilter">
+      <option value="all">All</option>
+      <option value="with">With email</option>
+      <option value="without">Without email</option>
+    </select>
   </div>
 
   <div id="error" class="error" style="display:none;"></div>
@@ -60,16 +78,35 @@
   }
 
   const columns = getInputFields(SCHEMA_JSON).map(f => ({ id: f.id, title: f.title || f.id }));
-  const headers = [...columns.map(c => c.title), "Submitted At"];
+  function getEmailFieldId(schema) {
+    const field = schema?.fields?.find(f => f && f.type === "email");
+    return field?.id ?? null;
+  }
+  function hasEmail(answers, emailFieldId) {
+    if (!emailFieldId) return false;
+    const val = answers[emailFieldId];
+    return typeof val === "string" && val.trim().length > 0;
+  }
+  const emailFieldId = getEmailFieldId(SCHEMA_JSON);
 
   const apiKeyEl = document.getElementById("apiKey");
   const loadBtn = document.getElementById("loadBtn");
   const errorEl = document.getElementById("error");
   const actionsEl = document.getElementById("actions");
+  const tabFull = document.getElementById("tabFull");
+  const tabPartial = document.getElementById("tabPartial");
+  const partialFilters = document.getElementById("partialFilters");
+  const emailFilter = document.getElementById("emailFilter");
   const thead = document.getElementById("thead");
   const tbody = document.getElementById("tbody");
   const exportCsvBtn = document.getElementById("exportCsv");
   const exportXlsxBtn = document.getElementById("exportXlsx");
+
+  let currentTab = "full";
+
+  tabFull.addEventListener("click", () => { currentTab = "full"; tabFull.classList.add("active"); tabPartial.classList.remove("active"); partialFilters.style.display = "none"; if (getKey()) loadBtn.click(); });
+  tabPartial.addEventListener("click", () => { currentTab = "partial"; tabPartial.classList.add("active"); tabFull.classList.remove("active"); partialFilters.style.display = "block"; if (getKey()) loadBtn.click(); });
+  emailFilter.addEventListener("change", () => { if (getKey()) loadBtn.click(); });
 
   function getKey() {
     const k = apiKeyEl.value.trim();
@@ -82,10 +119,25 @@
     errorEl.style.display = msg ? "block" : "none";
   }
 
-  function renderTable(responses) {
+  function buildHeaders(includeLastActivity) {
+    const cols = columns.map(c => c.title);
+    if (includeLastActivity) cols.push("Last activity");
+    cols.push("Submitted At");
+    return cols;
+  }
+
+  function filterByEmail(responses, filter) {
+    if (filter === "all" || !emailFieldId) return responses;
+    if (filter === "with") return responses.filter(r => hasEmail(r.answers, emailFieldId));
+    return responses.filter(r => !hasEmail(r.answers, emailFieldId));
+  }
+
+  function renderTable(responses, includeLastActivity) {
+    const headers = buildHeaders(includeLastActivity);
     thead.innerHTML = "<tr>" + headers.map(h => "<th>" + escapeHtml(h) + "</th>").join("") + "</tr>";
     tbody.innerHTML = responses.map(r => {
       const cells = columns.map(c => normalise(r.answers[c.id]));
+      if (includeLastActivity) cells.push(normalise(r.metadata?.updatedAt));
       cells.push(r.submittedAt || "");
       return "<tr>" + cells.map(c => "<td>" + escapeHtml(String(c)) + "</td>").join("") + "</tr>";
     }).join("");
@@ -110,7 +162,8 @@
     if (!key) { showError("Enter your API key"); return; }
     showError("");
     try {
-      const res = await fetch(WORKER_URL + "/api/responses/" + FORM_ID, {
+      const statusParam = currentTab === "full" ? "?status=completed" : "?status=in_progress";
+      const res = await fetch(WORKER_URL + "/api/responses/" + FORM_ID + statusParam, {
         headers: { Authorization: "Bearer " + key }
       });
       if (res.status === 401) { showError("Invalid API key"); return; }
@@ -118,8 +171,10 @@
       if (res.status === 404) { showError("Form not found"); return; }
       if (!res.ok) { showError("Error " + res.status); return; }
       const data = await res.json();
-      window._responses = data.responses || [];
-      renderTable(window._responses);
+      let responses = data.responses || [];
+      if (currentTab === "partial") responses = filterByEmail(responses, emailFilter.value);
+      window._responses = responses;
+      renderTable(responses, currentTab === "partial");
     } catch (e) {
       showError("Network error: " + (e.message || "Unknown"));
     }

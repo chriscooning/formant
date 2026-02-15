@@ -16,14 +16,19 @@
     .password-gate { margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; }
     .password-gate input { flex: 1; max-width: 300px; padding: 0.5rem; }
     .password-gate button { padding: 0.5rem 1rem; cursor: pointer; }
+    .tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
+    .tabs button { padding: 0.5rem 1rem; cursor: pointer; border: 1px solid #ccc; background: #f5f5f5; }
+    .tabs button.active { background: #fff; border-bottom-color: #fff; margin-bottom: -1px; }
+    .partial-filters { margin-bottom: 0.5rem; }
+    .partial-filters select { padding: 0.25rem 0.5rem; }
+    .load-section { margin-bottom: 1rem; }
+    .load-section button { padding: 0.5rem 1rem; cursor: pointer; }
     .actions { margin-bottom: 1rem; }
     .actions button { margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
     table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
     th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
     th { background: #f5f5f5; }
     .error { color: #c00; margin: 0.5rem 0; }
-    .load-section { margin-bottom: 1rem; }
-    .load-section button { padding: 0.5rem 1rem; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -36,17 +41,26 @@
   </div>
 
   <div id="mainContent" style="display:none;">
+    <div class="tabs">
+      <button type="button" id="tabFull" class="active">Full submissions</button>
+      <button type="button" id="tabPartial">Partial submissions</button>
+    </div>
+    <div id="partialFilters" class="partial-filters" style="display:none;">
+      <label>Filter: </label>
+      <select id="emailFilter">
+        <option value="all">All</option>
+        <option value="with">With email</option>
+        <option value="without">Without email</option>
+      </select>
+    </div>
     <div class="load-section">
       <button type="button" id="loadBtn">Load responses</button>
     </div>
-
     <div id="error" class="error" style="display:none;"></div>
-
     <div class="actions" id="actions" style="display:none;">
       <button type="button" id="exportCsv">Export CSV</button>
       <button type="button" id="exportXlsx">Export XLSX</button>
     </div>
-
     <div id="tableWrap" style="overflow-x: auto;">
       <table id="table">
         <thead id="thead"></thead>
@@ -73,13 +87,28 @@
     return fields.filter(f => f && typeof f.type === "string" && !NON_INPUT_TYPES.has(f.type));
   }
 
+  function getEmailFieldId(schema) {
+    const field = schema?.fields?.find(f => f && f.type === "email");
+    return field?.id ?? null;
+  }
+
+  function hasEmail(answers, emailFieldId) {
+    if (!emailFieldId) return false;
+    const val = answers[emailFieldId];
+    return typeof val === "string" && val.trim().length > 0;
+  }
+
   const columns = getInputFields(SCHEMA_JSON).map(f => ({ id: f.id, title: f.title || f.id }));
-  const headers = [...columns.map(c => c.title), "Submitted At"];
+  const emailFieldId = getEmailFieldId(SCHEMA_JSON);
 
   const passwordGate = document.getElementById("passwordGate");
   const mainContent = document.getElementById("mainContent");
   const passwordInput = document.getElementById("passwordInput");
   const unlockBtn = document.getElementById("unlockBtn");
+  const tabFull = document.getElementById("tabFull");
+  const tabPartial = document.getElementById("tabPartial");
+  const partialFilters = document.getElementById("partialFilters");
+  const emailFilter = document.getElementById("emailFilter");
   const loadBtn = document.getElementById("loadBtn");
   const errorEl = document.getElementById("error");
   const actionsEl = document.getElementById("actions");
@@ -88,12 +117,12 @@
   const exportCsvBtn = document.getElementById("exportCsv");
   const exportXlsxBtn = document.getElementById("exportXlsx");
 
+  let currentTab = "full";
+
   const SESSION_KEY = "formant_admin_unlocked";
 
   function isUnlocked() {
-    try {
-      return sessionStorage.getItem(SESSION_KEY) === "1";
-    } catch (_) { return false; }
+    try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch (_) { return false; }
   }
 
   async function verifyPassword(input, storedHash) {
@@ -112,27 +141,22 @@
 
   unlockBtn.addEventListener("click", async () => {
     const ok = await verifyPassword(passwordInput.value, ADMIN_PASSWORD_HASH);
-    if (ok) {
-      setUnlocked(true);
-      showError("");
-    } else {
-      showError("Invalid password");
-    }
+    if (ok) { setUnlocked(true); showError(""); } else { showError("Invalid password"); }
   });
-
-  passwordInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") unlockBtn.click();
-  });
+  passwordInput.addEventListener("keydown", (e) => { if (e.key === "Enter") unlockBtn.click(); });
 
   function showError(msg) {
     errorEl.textContent = msg;
     errorEl.style.display = msg ? "block" : "none";
   }
 
-  // ─── IndexedDB (same structure as renderer submit/local.ts) ───
+  tabFull.addEventListener("click", () => { currentTab = "full"; tabFull.classList.add("active"); tabPartial.classList.remove("active"); partialFilters.style.display = "none"; loadBtn.click(); });
+  tabPartial.addEventListener("click", () => { currentTab = "partial"; tabPartial.classList.add("active"); tabFull.classList.remove("active"); partialFilters.style.display = "block"; loadBtn.click(); });
+  emailFilter.addEventListener("change", () => loadBtn.click());
+
   const DB_NAME = "formant_local";
   const STORE_NAME = "responses";
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
 
   function openDB() {
     return new Promise((resolve, reject) => {
@@ -141,38 +165,66 @@
       req.onsuccess = () => resolve(req.result);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: ["formId", "id"] });
+        const tx = e.target.transaction;
+        if (e.oldVersion === 0) {
+          db.createObjectStore(STORE_NAME, { keyPath: ["formId", "sessionId"] });
+          return;
+        }
+        if (e.oldVersion < 2) {
+          const oldStore = tx.objectStore(STORE_NAME);
+          const getAllReq = oldStore.getAll();
+          getAllReq.onsuccess = () => {
+            const records = getAllReq.result || [];
+            db.deleteObjectStore(STORE_NAME);
+            const newStore = db.createObjectStore(STORE_NAME, { keyPath: ["formId", "sessionId"] });
+            for (const r of records) {
+              newStore.put({
+                formId: r.formId,
+                sessionId: r.id || r.sessionId,
+                status: "completed",
+                submittedAt: r.submittedAt,
+                updatedAt: r.submittedAt,
+                answers: r.answers || {},
+                metadata: r.metadata || null
+              });
+            }
+          };
         }
       };
     });
   }
 
-  async function getAllFromLocal(formId) {
+  async function getCompletedFromLocal(formId) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.getAll();
+      const req = tx.objectStore(STORE_NAME).getAll();
       req.onsuccess = () => {
         db.close();
-        const all = (req.result || [])
-          .filter(r => r.formId === formId)
-          .sort((a, b) => (a.submittedAt || "").localeCompare(b.submittedAt || ""))
-          .map(r => ({
-            formId: r.formId,
-            responseId: r.id,
-            submittedAt: r.submittedAt,
-            answers: r.answers || {},
-            metadata: r.metadata
-          }));
-        resolve(all);
+        resolve((req.result || []).filter(r => r.formId === formId && r.status === "completed")
+          .sort((a,b) => (a.submittedAt||"").localeCompare(b.submittedAt||""))
+          .map(r => ({ formId: r.formId, responseId: r.sessionId, status: "completed", submittedAt: r.submittedAt, answers: r.answers||{}, metadata: r.metadata })));
       };
       req.onerror = () => { db.close(); reject(req.error); };
     });
   }
 
-  // ─── Column helpers (port from export-common) ───
+  async function getPartialsFromLocal(formId) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).getAll();
+      req.onsuccess = () => {
+        db.close();
+        let list = (req.result || []).filter(r => r.formId === formId && r.status === "in_progress")
+          .sort((a,b) => (b.updatedAt||b.submittedAt||"").localeCompare(a.updatedAt||a.submittedAt||""));
+        list = list.map(r => ({ formId: r.formId, responseId: r.sessionId, status: "in_progress", submittedAt: r.submittedAt, answers: r.answers||{}, metadata: Object.assign({}, r.metadata, { updatedAt: r.updatedAt }) }));
+        resolve(list);
+      };
+      req.onerror = () => { db.close(); reject(req.error); };
+    });
+  }
+
   function normaliseValue(v) {
     if (v == null) return "";
     if (Array.isArray(v)) return v.map(String).join(", ");
@@ -182,20 +234,8 @@
 
   function escapeCsvField(value) {
     const s = String(value);
-    if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
+    if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) return '"' + s.replace(/"/g, '""') + '"';
     return s;
-  }
-
-  function buildCsv(responses) {
-    const rows = [headers.map(escapeCsvField)];
-    for (const r of responses) {
-      const cells = columns.map(c => escapeCsvField(normaliseValue(r.answers[c.id])));
-      cells.push(escapeCsvField(r.submittedAt || ""));
-      rows.push(cells);
-    }
-    return rows.map(r => r.join(",")).join("\r\n");
   }
 
   function escapeHtml(s) {
@@ -204,22 +244,43 @@
     return d.innerHTML;
   }
 
-  function renderTable(responses) {
+  function buildHeaders(includeLastActivity) {
+    const cols = columns.map(c => c.title);
+    if (includeLastActivity) cols.push("Last activity");
+    cols.push("Submitted At");
+    return cols;
+  }
+
+  function renderTable(responses, includeLastActivity) {
+    const headers = buildHeaders(includeLastActivity);
     window._responses = responses;
     thead.innerHTML = "<tr>" + headers.map(h => "<th>" + escapeHtml(h) + "</th>").join("") + "</tr>";
     tbody.innerHTML = responses.map(r => {
       const cells = columns.map(c => normaliseValue(r.answers[c.id]));
+      if (includeLastActivity) cells.push(normaliseValue(r.metadata?.updatedAt));
       cells.push(r.submittedAt || "");
       return "<tr>" + cells.map(c => "<td>" + escapeHtml(String(c)) + "</td>").join("") + "</tr>";
     }).join("");
     actionsEl.style.display = responses.length > 0 ? "block" : "none";
   }
 
+  function filterByEmail(responses, filter) {
+    if (filter === "all" || !emailFieldId) return responses;
+    if (filter === "with") return responses.filter(r => hasEmail(r.answers, emailFieldId));
+    return responses.filter(r => !hasEmail(r.answers, emailFieldId));
+  }
+
   loadBtn.addEventListener("click", async () => {
     showError("");
     try {
-      const responses = await getAllFromLocal(FORM_ID);
-      renderTable(responses);
+      let responses;
+      if (currentTab === "full") {
+        responses = await getCompletedFromLocal(FORM_ID);
+      } else {
+        responses = await getPartialsFromLocal(FORM_ID);
+        responses = filterByEmail(responses, emailFilter.value);
+      }
+      renderTable(responses, currentTab === "partial");
     } catch (e) {
       showError("Failed to load: " + (e.message || "Unknown"));
     }
@@ -233,35 +294,44 @@
     URL.revokeObjectURL(a.href);
   }
 
+  function buildCsv(responses, includeLastActivity) {
+    const headers = buildHeaders(includeLastActivity);
+    const rows = [headers.map(escapeCsvField)];
+    for (const r of responses) {
+      const cells = columns.map(c => escapeCsvField(normaliseValue(r.answers[c.id])));
+      if (includeLastActivity) cells.push(escapeCsvField(normaliseValue(r.metadata?.updatedAt)));
+      cells.push(escapeCsvField(r.submittedAt || ""));
+      rows.push(cells);
+    }
+    return rows.map(r => r.join(",")).join("\r\n");
+  }
+
   exportCsvBtn.addEventListener("click", () => {
     const responses = window._responses || [];
     if (responses.length === 0) { showError("No data to export"); return; }
-    const csv = buildCsv(responses);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    downloadBlob(blob, "responses.csv");
+    const csv = buildCsv(responses, currentTab === "partial");
+    downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), "responses.csv");
   });
 
   exportXlsxBtn.addEventListener("click", () => {
     const responses = window._responses || [];
     if (responses.length === 0) { showError("No data to export"); return; }
     if (typeof XLSX === "undefined") { showError("XLSX library not loaded"); return; }
+    const headers = buildHeaders(currentTab === "partial");
     const data = [headers];
     for (const r of responses) {
       const row = columns.map(c => normaliseValue(r.answers[c.id]));
+      if (currentTab === "partial") row.push(normaliseValue(r.metadata?.updatedAt));
       row.push(r.submittedAt || "");
       data.push(row);
     }
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Responses");
-    const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    downloadBlob(blob, "responses.xlsx");
+    downloadBlob(new Blob([XLSX.write(wb, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "responses.xlsx");
   });
 
-  if (isUnlocked()) {
-    setUnlocked(true);
-  }
+  if (isUnlocked()) setUnlocked(true);
 })();
   </script>
 </body>

@@ -4,6 +4,7 @@ import { useFormEngine } from "./hooks/useFormEngine";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { useTheme } from "./hooks/useTheme";
 import { useAutoSave } from "./hooks/useAutoSave";
+import { useLocalPartialSave } from "./hooks/useLocalPartialSave";
 import { questionRegistry } from "./questions";
 import type { EndingComponentProps } from "./questions";
 import { ProgressBar } from "./components/ProgressBar";
@@ -47,14 +48,20 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
   const [submitted, setSubmitted] = useState(false);
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-save: enabled when at least one service destination exists
-  const hasServiceDest = (schema.submit?.destinations ?? []).some(
-    (d) => d.type === "service"
-  );
+  const destinations = schema.submit?.destinations ?? [];
+  const hasServiceDest = destinations.some((d) => d.type === "service");
+  const hasLocalDest = destinations.some((d) => d.type === "local");
+
   const autoSave = useAutoSave({
     schema,
     state,
     enabled: hasServiceDest,
+  });
+
+  const localPartialSave = useLocalPartialSave({
+    schema,
+    state,
+    enabled: hasLocalDest,
   });
 
   // Compute question number (1-indexed, answerable only) and total
@@ -91,12 +98,14 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
         completionRate: progress,
       };
 
-      const results = await submitResponses(schema, answers, metadata);
+      const results = await submitResponses(schema, answers, metadata, {
+        responseId: autoSave.responseId,
+      });
       setSubmitResults(results);
       setSubmitted(true);
 
-      // Signal auto-save to stop
       autoSave.markCompleted();
+      localPartialSave.markCompleted();
     } catch (err) {
       console.error("[formant] submit error:", err);
       setSubmitResults([
@@ -117,6 +126,7 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
     schema,
     answers,
     autoSave,
+    localPartialSave,
   ]);
 
   // ─── Transition Logic ───

@@ -3,20 +3,26 @@ import type { FormResponse } from "@formant/core";
 /**
  * Submit form response to the Formant service API.
  *
- * POSTs to `${endpoint}/api/responses/${formId}`.
- * No authentication required — the submission endpoint is public.
+ * When responseId is provided (from auto-save), PUTs to update existing response.
+ * Otherwise POSTs to create new. No authentication required — public endpoint.
  */
 export async function submitToService(
   formId: string,
   endpoint: string,
-  response: FormResponse
+  response: FormResponse,
+  responseId?: string | null
 ): Promise<void> {
-  const url = `${endpoint}/api/responses/${formId}`;
+  const payload = { ...response, status: "completed" as const };
+  const url =
+    responseId
+      ? `${endpoint}/api/responses/${formId}/${responseId}`
+      : `${endpoint}/api/responses/${formId}`;
+  const method = responseId ? "PUT" : "POST";
 
   const res = await fetch(url, {
-    method: "POST",
+    method,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(response),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {

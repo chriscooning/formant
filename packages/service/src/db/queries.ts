@@ -18,6 +18,9 @@ export interface ResponseRow {
   answers_json: string;
   metadata_json: string | null;
   submitted_at: string;
+  status: string;
+  session_id: string | null;
+  updated_at: string | null;
 }
 
 // ─── Form Queries ───
@@ -110,14 +113,26 @@ export async function insertResponse(
     formId: string;
     answersJson: string;
     metadataJson: string | null;
+    status?: "in_progress" | "completed";
+    sessionId?: string | null;
   },
 ): Promise<ResponseRow> {
+  const status = params.status ?? "completed";
+  const sessionId = params.sessionId ?? null;
+
   await db
     .prepare(
-      `INSERT INTO responses (id, form_id, answers_json, metadata_json)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO responses (id, form_id, answers_json, metadata_json, status, session_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind(params.id, params.formId, params.answersJson, params.metadataJson)
+    .bind(
+      params.id,
+      params.formId,
+      params.answersJson,
+      params.metadataJson,
+      status,
+      sessionId,
+    )
     .run();
 
   const row = await db
@@ -129,6 +144,41 @@ export async function insertResponse(
   return row;
 }
 
+export async function updateResponse(
+  db: D1Database,
+  params: {
+    id: string;
+    formId: string;
+    answersJson: string;
+    metadataJson: string | null;
+    status: "in_progress" | "completed";
+  },
+): Promise<{ updated: boolean }> {
+  const existing = await db
+    .prepare("SELECT status FROM responses WHERE id = ? AND form_id = ?")
+    .bind(params.id, params.formId)
+    .first<{ status: string }>();
+
+  if (!existing) return { updated: false };
+  if (existing.status === "completed") return { updated: false };
+
+  await db
+    .prepare(
+      `UPDATE responses SET answers_json = ?, metadata_json = ?, status = ?, updated_at = datetime('now')
+       WHERE id = ? AND form_id = ?`,
+    )
+    .bind(
+      params.answersJson,
+      params.metadataJson,
+      params.status,
+      params.id,
+      params.formId,
+    )
+    .run();
+
+  return { updated: true };
+}
+
 export async function getResponsesByFormId(
   db: D1Database,
   formId: string,
@@ -136,6 +186,7 @@ export async function getResponsesByFormId(
     limit?: number;
     offset?: number;
     since?: string;
+    status?: "in_progress" | "completed" | "all";
   } = {},
 ): Promise<{ responses: ResponseRow[]; total: number }> {
   const limit = options.limit ?? 100;
@@ -154,7 +205,18 @@ export async function getResponsesByFormId(
     countBindings.push(options.since);
   }
 
-  query += " ORDER BY submitted_at DESC LIMIT ? OFFSET ?";
+  if (options.status && options.status !== "all") {
+    query += " AND status = ?";
+    countQuery += " AND status = ?";
+    bindings.push(options.status);
+    countBindings.push(options.status);
+  }
+
+  const orderBy =
+    options.status === "in_progress"
+      ? "ORDER BY updated_at DESC, submitted_at DESC"
+      : "ORDER BY submitted_at DESC";
+  query += ` ${orderBy} LIMIT ? OFFSET ?`;
   bindings.push(limit, offset);
 
   const [responsesResult, countResult] = await Promise.all([
@@ -188,12 +250,14 @@ export async function getResponseCount(
 export async function getAllResponsesForExport(
   db: D1Database,
   formId: string,
+  options?: { status?: "in_progress" | "completed" },
 ): Promise<ResponseRow[]> {
+  const status = options?.status ?? "completed";
   const result = await db
     .prepare(
-      "SELECT * FROM responses WHERE form_id = ? ORDER BY submitted_at ASC",
+      "SELECT * FROM responses WHERE form_id = ? AND status = ? ORDER BY submitted_at ASC",
     )
-    .bind(formId)
+    .bind(formId, status)
     .all<ResponseRow>();
   return result.results;
 }

@@ -37,12 +37,13 @@ async function submitResponse(
   formId: string,
   answers: Record<string, unknown> = {},
   metadata?: Record<string, unknown>,
+  status: "in_progress" | "completed" = "completed",
 ) {
   const body: Record<string, unknown> = {
     formId,
     submittedAt: new Date().toISOString(),
     answers,
-    status: "completed",
+    status,
   };
   if (metadata) body.metadata = metadata;
 
@@ -129,7 +130,7 @@ describe("POST /api/responses/:formId", () => {
     const stored = getBody.responses.find((r) => r.id === responseId);
     expect(stored).toBeDefined();
     expect(stored!.answers).toEqual(answers);
-    expect(stored!.metadata).toEqual(metadata);
+    expect(stored!.metadata).toMatchObject(metadata);
   });
 
   it("includes CORS headers for cross-origin submissions", async () => {
@@ -153,6 +154,58 @@ describe("POST /api/responses/:formId", () => {
 
     expect(res.status).toBe(201);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  });
+});
+
+// ─── PUT /api/responses/:formId/:responseId ───
+
+describe("PUT /api/responses/:formId/:responseId", () => {
+  it("updates an in_progress response", async () => {
+    const form = await createForm();
+    const { body: postBody } = await submitResponse(form.id, { name: "Alice" }, undefined, "in_progress");
+    const responseId = postBody.responseId ?? postBody.id;
+
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/${responseId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: { name: "Alice Updated", rating: 4 },
+          metadata: { lastFieldId: "rating" },
+          status: "in_progress",
+        }),
+      },
+    );
+
+    expect(res.status).toBe(200);
+
+    const getRes = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}?status=in_progress`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } },
+    );
+    const getBody = (await getRes.json()) as { responses: Array<{ answers: Record<string, unknown> }> };
+    expect(getBody.responses[0]?.answers).toEqual({ name: "Alice Updated", rating: 4 });
+  });
+
+  it("returns 409 when updating a completed response", async () => {
+    const form = await createForm();
+    const { body: postBody } = await submitResponse(form.id, { name: "Bob" });
+    const responseId = postBody.responseId ?? postBody.id;
+
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/${responseId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: { name: "Bob Updated" },
+          status: "in_progress",
+        }),
+      },
+    );
+
+    expect(res.status).toBe(409);
   });
 });
 
