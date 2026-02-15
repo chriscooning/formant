@@ -205,6 +205,8 @@ export interface FormSchema {
   submit?: {
     destinations: SubmitDestination[];
     successMessage?: string;
+    /** When false, hide the "Download Responses" button on the ending screen. Default: true. */
+    allowSubmitterDownload?: boolean;
   };
   theme?: ThemeConfig;
   meta?: {

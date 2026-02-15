@@ -18,6 +18,7 @@ export default async function globalSetup() {
     "branching-form.json",
     "full-form.json",
     "submit-form.json",
+    "submit-form-no-download.json",
   ];
 
   for (const fixture of fixtures) {

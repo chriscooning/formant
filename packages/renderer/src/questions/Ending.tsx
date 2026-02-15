@@ -122,7 +122,9 @@ export const Ending: React.FC<EndingComponentProps> = ({
 
       {status === "all_failed" && (
         <div className="ff-submit-status ff-submit-status--error" aria-live="polite" data-testid="submit-all-failed">
-          Submission failed — please download your responses below
+          {onDownloadExcel
+            ? "Submission failed — please download your responses below"
+            : "Submission failed. Please try again or contact support."}
           {submitResults && (
             <div className="ff-submit-details">
               {submitResults.map((r, i) => (

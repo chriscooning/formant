@@ -207,4 +207,47 @@ describe("Formant", () => {
     const initialWidth = (progressBar as HTMLElement)?.style.width;
     expect(initialWidth).toBe("0%");
   });
+
+  it("hides download button when allowSubmitterDownload is false", async () => {
+    const noDownloadSchema: FormSchema = {
+      ...testSchema,
+      submit: {
+        destinations: [{ type: "excel" }],
+        allowSubmitterDownload: false,
+      },
+    };
+    render(<Formant schema={noDownloadSchema} />);
+
+    // Advance to ending
+    pressKey("Enter");
+    advanceTimers(350);
+    advanceTimers(50);
+
+    const input = container.querySelector("input");
+    if (input) {
+      act(() => {
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value",
+        )?.set;
+        setter?.call(input, "Alice");
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    }
+    pressKey("Enter");
+    advanceTimers(350);
+    advanceTimers(50);
+
+    pressKey("4"); // rating
+    pressKey("Enter");
+    advanceTimers(350);
+    advanceTimers(50);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Thank you!");
+    expect(container.querySelector("[data-testid='download-excel']")).toBeNull();
+  });
 });

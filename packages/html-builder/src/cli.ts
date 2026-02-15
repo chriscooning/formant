@@ -99,16 +99,14 @@ function parseArgs(argv: string[]): {
 function ensureLocalDestination(schema: FormSchema): FormSchema {
   const destinations = schema.submit?.destinations ?? [];
   const hasLocal = destinations.some((d) => d && d.type === "local");
-  if (hasLocal) return schema;
-
-  const updated: FormSchema = {
+  return {
     ...schema,
     submit: {
       ...schema.submit,
-      destinations: [...destinations, { type: "local" }],
+      destinations: hasLocal ? destinations : [...destinations, { type: "local" }],
+      allowSubmitterDownload: false,
     },
   };
-  return updated;
 }
 
 function buildForm(argv: string[]): string {

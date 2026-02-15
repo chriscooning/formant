@@ -200,7 +200,7 @@ test.describe("Submit Handlers", () => {
     await expect(page.locator("[data-testid='download-excel']")).toBeVisible();
   });
 
-  test("excel download button is always visible on ending screen", async ({
+  test("excel download button is visible on ending screen when allowed", async ({
     page,
   }) => {
     // Mock endpoints to succeed
@@ -216,10 +216,26 @@ test.describe("Submit Handlers", () => {
 
     await expect(page.locator(".ff-ending-title")).toHaveText("All done!");
 
-    // The Download Responses button should always exist
+    // The Download Responses button should exist (submit-form has allowSubmitterDownload default true)
     const downloadBtn = page.locator("[data-testid='download-excel']");
     await expect(downloadBtn).toBeVisible();
     await expect(downloadBtn).toHaveText("Download Responses");
+  });
+
+  test("excel download button is hidden when allowSubmitterDownload is false", async ({
+    page,
+  }) => {
+    await page.goto("/submit-form-no-download.html");
+    await page.locator(".ff-welcome-btn").click();
+    await expect(page.locator(".ff-question-title")).toHaveText("Your name");
+    await waitForKeyboardReady(page);
+    await fillInput(page, ".ff-input", "Alice");
+    await page.keyboard.press("Enter");
+
+    await expect(page.locator(".ff-ending-title")).toHaveText("All done!");
+
+    const downloadBtn = page.locator("[data-testid='download-excel']");
+    await expect(downloadBtn).not.toBeVisible();
   });
 
   test("response payload structure matches FormResponse type", async ({

@@ -315,7 +315,10 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
         fields: schema.fields,
         submitResults,
         submitting,
-        onDownloadExcel: handleDownloadExcel,
+        onDownloadExcel:
+          schema.submit?.allowSubmitterDownload !== false
+            ? handleDownloadExcel
+            : undefined,
       } satisfies EndingComponentProps)
     : {
         field: currentField,

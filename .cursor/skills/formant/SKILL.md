@@ -103,6 +103,8 @@ Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
 
 Multiple destinations fire in parallel. Always include `excel` as a fallback (except for local/kiosk mode).
 
+- **allowSubmitterDownload** (optional): When `false`, hides the "Download Responses" button on the thank-you screen. Use for kiosk/local forms where the admin exports from the admin panel. Default: `true`. Set automatically to `false` when building with `--local`.
+
 | Type | Required Fields | Notes |
 |------|-----------------|-------|
 | `excel` | -- | Client-side XLSX download. Optional `filename`. |
