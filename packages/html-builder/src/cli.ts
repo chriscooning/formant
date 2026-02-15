@@ -4,6 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 import { buildFormHTML } from "./build";
+import { buildAdminHTML, hashAdminPassword } from "./buildLocal";
+import type { FormSchema } from "@formant/core";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +20,7 @@ function usage(): void {
   formant — build self-contained HTML forms from JSON schemas
 
   Usage:
-    formant build <schema.json> [-o <output.html>] [--no-minify] [--inline]
+    formant build <schema.json> [-o <output.html>] [--no-minify] [--inline] [--local]
     formant preview <schema.json> [--no-minify] [--inline]
     formant deploy <form.html> [--target offline|vercel|cloudflare]
 
@@ -31,11 +33,14 @@ function usage(): void {
     -o, --output <file>   Output path (default: <schema-name>.html next to the JSON)
     --no-minify           Skip JS minification (useful for debugging)
     --inline              Inline React/ReactDOM instead of CDN script tags
+    --local               Local/kiosk mode: form + admin panel, IndexedDB storage
+    --admin-password <p>  Admin password for --local (or FORMANT_ADMIN_PASSWORD env)
     --target <target>     Deploy target: offline, vercel, or cloudflare
 
   Examples:
     formant build feedback.json
     formant build feedback.json -o dist/feedback.html
+    formant build forms/simple-form.json --local
     formant preview survey.json
     formant deploy forms/feedback.html
     formant deploy forms/feedback.html --target cloudflare
@@ -47,11 +52,15 @@ function parseArgs(argv: string[]): {
   output: string | null;
   minify: boolean;
   inline: boolean;
+  local: boolean;
+  adminPassword: string | null;
 } {
   let schemaPath: string | null = null;
   let output: string | null = null;
   let minify = true;
   let inline = false;
+  let local = false;
+  let adminPassword: string | null = null;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -65,6 +74,14 @@ function parseArgs(argv: string[]): {
       minify = false;
     } else if (arg === "--inline") {
       inline = true;
+    } else if (arg === "--local") {
+      local = true;
+    } else if (arg === "--admin-password") {
+      adminPassword = argv[++i] ?? null;
+      if (!adminPassword) {
+        console.error("Error: --admin-password requires a value");
+        process.exit(1);
+      }
     } else if (!arg.startsWith("-")) {
       schemaPath = arg;
     }
@@ -76,11 +93,27 @@ function parseArgs(argv: string[]): {
     process.exit(1);
   }
 
-  return { schemaPath, output, minify, inline };
+  return { schemaPath, output, minify, inline, local, adminPassword };
+}
+
+function ensureLocalDestination(schema: FormSchema): FormSchema {
+  const destinations = schema.submit?.destinations ?? [];
+  const hasLocal = destinations.some((d) => d && d.type === "local");
+  if (hasLocal) return schema;
+
+  const updated: FormSchema = {
+    ...schema,
+    submit: {
+      ...schema.submit,
+      destinations: [...destinations, { type: "local" }],
+    },
+  };
+  return updated;
 }
 
 function buildForm(argv: string[]): string {
-  const { schemaPath, output, minify, inline } = parseArgs(argv);
+  const { schemaPath, output, minify, inline, local, adminPassword } =
+    parseArgs(argv);
 
   const resolved = path.resolve(schemaPath);
   if (!fs.existsSync(resolved)) {
@@ -95,6 +128,18 @@ function buildForm(argv: string[]): string {
   } catch {
     console.error(`Error: invalid JSON in ${resolved}`);
     process.exit(1);
+  }
+
+  if (local) {
+    const password =
+      adminPassword ?? process.env.FORMANT_ADMIN_PASSWORD ?? null;
+    if (!password) {
+      console.error(
+        "Error: --local requires admin password. Set FORMANT_ADMIN_PASSWORD or use --admin-password <p>",
+      );
+      process.exit(1);
+    }
+    schema = ensureLocalDestination(schema as FormSchema);
   }
 
   console.log(`Building form from ${path.basename(resolved)}...`);
@@ -127,6 +172,18 @@ function buildForm(argv: string[]): string {
 
   const sizeKB = (Buffer.byteLength(html) / 1024).toFixed(1);
   console.log(`Done — ${sizeKB} KB written to ${outPath}`);
+
+  if (local) {
+    const adminPasswordResolved =
+      adminPassword ?? process.env.FORMANT_ADMIN_PASSWORD ?? "";
+    const adminHash = hashAdminPassword(adminPasswordResolved);
+    const adminSchema = schema as FormSchema;
+    const adminHtml = buildAdminHTML(adminSchema, adminHash);
+    const adminOutPath = outPath.replace(/\.html$/, "-admin.html");
+    fs.writeFileSync(adminOutPath, adminHtml);
+    const adminSizeKB = (Buffer.byteLength(adminHtml) / 1024).toFixed(1);
+    console.log(`Admin panel — ${adminSizeKB} KB written to ${adminOutPath}`);
+  }
 
   return outPath;
 }

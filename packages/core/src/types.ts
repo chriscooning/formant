@@ -176,11 +176,16 @@ export interface ExcelDestination {
   filename?: string;
 }
 
+export interface LocalDestination {
+  type: "local";
+}
+
 export type SubmitDestination =
   | SheetsDestination
   | WebhookDestination
   | ServiceDestination
-  | ExcelDestination;
+  | ExcelDestination
+  | LocalDestination;
 
 // ─── Theme ───
 

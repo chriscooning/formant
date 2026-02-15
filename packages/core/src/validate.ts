@@ -284,5 +284,8 @@ function validateDestination(dest: SubmitDestination, errors: string[]): void {
     case "excel":
       // Excel needs nothing
       break;
+    case "local":
+      // No config required
+      break;
   }
 }

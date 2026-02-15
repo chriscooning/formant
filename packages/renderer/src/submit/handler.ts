@@ -3,6 +3,7 @@ import { submitToSheets } from "./sheets";
 import { submitToWebhook } from "./webhook";
 import { submitToService } from "./service";
 import { downloadExcel } from "./excel";
+import { saveToLocal } from "./local";
 
 export interface SubmitResult {
   destination: string;
@@ -51,6 +52,10 @@ export async function submitResponses(
         case "excel":
           downloadExcel(schema, response, dest.filename);
           return { destination: "excel", success: true };
+
+        case "local":
+          await saveToLocal(schema.id, response);
+          return { destination: "local", success: true };
 
         default:
           return {

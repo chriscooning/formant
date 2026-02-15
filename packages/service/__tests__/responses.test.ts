@@ -345,3 +345,97 @@ describe("GET /api/responses/:formId/xlsx", () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ─── GET /api/responses/:formId/csv ───
+
+describe("GET /api/responses/:formId/csv", () => {
+  it("returns a csv file with correct content type and parseable content", async () => {
+    const form = await createForm();
+    await submitResponse(form.id, { name: "Alice", rating: 5 });
+
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/csv`,
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` },
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("text/csv");
+    expect(res.headers.get("Content-Type")).toContain("charset=utf-8");
+    expect(res.headers.get("Content-Disposition")).toContain("attachment");
+    expect(res.headers.get("Content-Disposition")).toContain(".csv");
+
+    const text = await res.text();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    expect(lines.length).toBeGreaterThanOrEqual(2); // header + at least one row
+
+    const parseCsvLine = (line: string) =>
+      line.split(",").map((cell) => cell.replace(/^"|"$/g, "").replace(/""/g, '"'));
+    const headerLine = lines[0];
+    const dataLine = lines[1];
+    expect(headerLine).toBeDefined();
+    expect(dataLine).toBeDefined();
+    const headers = parseCsvLine(headerLine!);
+    expect(headers).toContain("Your Name");
+    expect(headers).toContain("Rating");
+    expect(headers).toContain("Submitted At");
+
+    const dataRow = parseCsvLine(dataLine!);
+    const nameIdx = headers.indexOf("Your Name");
+    const ratingIdx = headers.indexOf("Rating");
+    expect(nameIdx).toBeGreaterThanOrEqual(0);
+    expect(ratingIdx).toBeGreaterThanOrEqual(0);
+    expect(dataRow[nameIdx] ?? "").toBe("Alice");
+    expect(dataRow[ratingIdx] ?? "").toBe("5");
+  });
+
+  it("returns csv even with no responses", async () => {
+    const form = await createForm();
+
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/csv`,
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` },
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Submitted At");
+  });
+
+  it("returns 401 without auth", async () => {
+    const form = await createForm();
+
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/csv`,
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 with wrong API key", async () => {
+    const form = await createForm(API_KEY);
+
+    const res = await SELF.fetch(
+      `http://localhost/api/responses/${form.id}/csv`,
+      {
+        headers: { Authorization: `Bearer ${OTHER_API_KEY}` },
+      },
+    );
+
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for nonexistent form", async () => {
+    const res = await SELF.fetch(
+      "http://localhost/api/responses/nonexistent1/csv",
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` },
+      },
+    );
+
+    expect(res.status).toBe(404);
+  });
+});

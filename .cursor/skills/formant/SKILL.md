@@ -35,12 +35,14 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 | Target | Best For | Response Collection | Command |
 |--------|----------|---------------------|---------|
 | **Offline** | Testing, internal use, email the HTML file | Excel download on submit | `pnpm deploy <form.html> --target offline` |
+| **Local** | Kiosk mode, iPad, no network | IndexedDB (form + admin panel) | `pnpm formant build forms/<name>.json --local` |
 | **Vercel** | Shareable public URL, no server-side storage needed | Excel download (or add Google Sheets) | `pnpm deploy <form.html> --target vercel` |
-| **Cloudflare** | Production: hosting + response DB in one place | Built-in D1 database + API + XLSX export | `pnpm deploy <form.html> --target cloudflare` |
+| **Cloudflare** | Production: hosting + response DB in one place | Built-in D1 database + API + XLSX/CSV export | `pnpm deploy <form.html> --target cloudflare` |
 
 - **Offline**: Opens the form in the default browser. Responses download as Excel on submit. No hosting needed.
+- **Local**: Build with `--local` produces `forms/<name>.html` (form) and `forms/<name>-admin.html` (admin panel). Requires `FORMANT_ADMIN_PASSWORD` in env or `--admin-password <p>`. Form stores responses in IndexedDB; admin reads from IndexedDB, password gate, CSV/XLSX export. Copy both files to the device (same folder for IndexedDB origin). Open form for kiosk, admin for export.
 - **Vercel**: Deploys as a static site with a public URL. Optionally set up Google Sheets for response collection (the script walks through it).
-- **Cloudflare**: Deploys a Cloudflare Worker with D1 database. Forms are uploaded via API, responses are collected server-side, and an XLSX export endpoint is available. First-time setup creates the database and runs migrations automatically.
+- **Cloudflare**: Deploys a Cloudflare Worker with D1 database. Forms are uploaded via API, responses are collected server-side, and XLSX/CSV export endpoints are available. A local dashboard is created at `forms/<name>-dashboard.html` — open it, paste your API key, and view or export responses (CSV or XLSX). First-time setup creates the database and runs migrations automatically.
 
 Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
 
@@ -88,6 +90,7 @@ Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
 | Option | Schema mapping | Notes |
 |--------|----------------|-------|
 | Excel download | `{ "type": "excel" }` | Client-side XLSX. Works on all hosting targets. |
+| Local (IndexedDB) | `{ "type": "local" }` | Kiosk mode. Use `pnpm formant build --local` for form + admin. |
 | Google Sheets | `{ "type": "sheets", "url": "..." }` | Requires `scripts/setup-sheets.sh` |
 | Webhook | `{ "type": "webhook", "url": "..." }` | POST JSON to any URL |
 | Cloudflare D1 | `{ "type": "service", ... }` | Requires Cloudflare deploy |
@@ -98,11 +101,12 @@ Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
 
 ## Submit Destinations
 
-Multiple destinations fire in parallel. Always include `excel` as a fallback.
+Multiple destinations fire in parallel. Always include `excel` as a fallback (except for local/kiosk mode).
 
 | Type | Required Fields | Notes |
 |------|-----------------|-------|
 | `excel` | -- | Client-side XLSX download. Optional `filename`. |
+| `local` | -- | IndexedDB storage. Use with `--local` build for form + admin. |
 | `sheets` | `url` | Google Apps Script web app URL |
 | `webhook` | `url` | POST JSON. Optional `headers`. Retries once on 5xx. |
 | `service` | `formId` | Formant hosting service. Optional `endpoint`. |
@@ -142,6 +146,7 @@ All branches must eventually reach the `ending` field.
 ```bash
 # Build
 pnpm formant build <schema.json> [-o output.html] [--no-minify] [--inline]
+pnpm formant build forms/<name>.json --local  # form + admin, requires FORMANT_ADMIN_PASSWORD
 pnpm formant preview <schema.json>   # build + open in browser
 
 # Deploy (interactive menu)
@@ -151,6 +156,10 @@ pnpm deploy <form.html>
 pnpm deploy <form.html> --target offline      # open in browser
 pnpm deploy <form.html> --target vercel       # deploy to Vercel
 pnpm deploy <form.html> --target cloudflare   # deploy to Cloudflare Workers
+
+# Local/kiosk: build produces form.html + form-admin.html
+export FORMANT_ADMIN_PASSWORD=your-secret
+pnpm formant build forms/<name>.json --local
 
 # Google Sheets setup (standalone)
 bash scripts/setup-sheets.sh

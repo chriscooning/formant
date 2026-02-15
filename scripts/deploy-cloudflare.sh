@@ -172,6 +172,32 @@ BODY=$(echo "$RESPONSE" | sed '$d')
 if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
   FORM_ID=$(echo "$BODY" | node -e "process.stdin.on('data',d=>{try{console.log(JSON.parse(d).id||JSON.parse(d).formId||'')}catch{console.log('')}})" 2>/dev/null || echo "")
 
+  # ─── Generate dashboard ───
+  BASENAME=$(basename "$HTML_FILE" .html)
+  FORM_TITLE=$(echo "$SCHEMA_JSON" | jq -r '.title // "form"' 2>/dev/null || echo "form")
+  TEMPLATE="$ROOT_DIR/.cursor/skills/formant/templates/responses-dashboard.html"
+  DASHBOARD_OUT="$ROOT_DIR/forms/${BASENAME}-dashboard.html"
+  if [[ -f "$TEMPLATE" ]]; then
+    WORKER_URL="$WORKER_URL" FORM_ID="$FORM_ID" FORM_TITLE="$FORM_TITLE" \
+    TEMPLATE="$TEMPLATE" DASHBOARD_OUT="$DASHBOARD_OUT" JSON_FILE="$JSON_FILE" \
+    node -e '
+      const fs = require("fs");
+      const path = require("path");
+      let schema = "{}";
+      try { schema = fs.readFileSync(process.env.JSON_FILE, "utf-8"); } catch {}
+      try { schema = JSON.stringify(JSON.parse(schema)); } catch {}
+      schema = schema.replace(/<\/script>/gi, "<\\/script>");
+      let t = fs.readFileSync(process.env.TEMPLATE, "utf-8");
+      t = t.replace(/\{\{WORKER_URL\}\}/g, process.env.WORKER_URL || "");
+      t = t.replace(/\{\{FORM_ID\}\}/g, process.env.FORM_ID || "");
+      const title = (process.env.FORM_TITLE || "form").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      t = t.replace(/\{\{FORM_TITLE\}\}/g, title);
+      t = t.replace(/\{\{SCHEMA_JSON\}\}/, schema);
+      fs.mkdirSync(path.dirname(process.env.DASHBOARD_OUT), { recursive: true });
+      fs.writeFileSync(process.env.DASHBOARD_OUT, t);
+    '
+  fi
+
   echo ""
   echo "  ═══════════════════════════════════════════════"
   echo "  ✓ Form deployed successfully!"
@@ -182,13 +208,20 @@ if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
   echo ""
   echo "  Management commands:"
   echo "    # View responses"
-  echo "    curl -H 'Authorization: Bearer $API_KEY' $WORKER_URL/api/forms/$FORM_ID/responses"
+  echo "    curl -H 'Authorization: Bearer $API_KEY' $WORKER_URL/api/responses/$FORM_ID"
   echo ""
   echo "    # Export as XLSX"
-  echo "    curl -H 'Authorization: Bearer $API_KEY' $WORKER_URL/api/forms/$FORM_ID/responses/export -o responses.xlsx"
+  echo "    curl -H 'Authorization: Bearer $API_KEY' $WORKER_URL/api/responses/$FORM_ID/xlsx -o responses.xlsx"
+  echo ""
+  echo "    # Export as CSV"
+  echo "    curl -H 'Authorization: Bearer $API_KEY' $WORKER_URL/api/responses/$FORM_ID/csv -o responses.csv"
   echo ""
   echo "    # Delete form"
   echo "    curl -X DELETE -H 'Authorization: Bearer $API_KEY' $WORKER_URL/api/forms/$FORM_ID"
+  echo ""
+  if [[ -f "$TEMPLATE" ]]; then
+    echo "  Dashboard: forms/${BASENAME}-dashboard.html (open locally, paste API key to view responses)"
+  fi
   echo "  ═══════════════════════════════════════════════"
   echo ""
 else

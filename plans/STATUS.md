@@ -19,6 +19,9 @@ Track which phases are complete. Each agent session should read this first and u
 | 3A | Service Database & Middleware | **complete** | 18 tests pass, tsc clean, D1 schema + queries + CORS + auth middleware + Hono skeleton |
 | 3B | Service API Routes & Tests | **complete** | 35 new tests (53 total service), tsc clean, all 6 endpoints, XLSX export, skill deployment docs |
 | 4 | Multi-Destination & Webhooks | **complete** | 8 E2E submit tests + 6 webhook unit tests, tsc clean, 28/28 E2E pass, 186 unit tests pass |
+| 5A | Local Submit Destination | **complete** | IndexedDB storage, no Excel download, saveToLocal + getAllFromLocal |
+| 5B | Admin Panel (Local Mode) | **complete** | admin-local.html template, password gate, CSV/XLSX, verify script |
+| 5C | Build Integration (--local) | **complete** | CLI --local, admin password from env, form + admin output |
 
 ## Execution Order
 
@@ -34,6 +37,9 @@ Parallel opportunities (can start once their dependency is met):
 1-Skill can start after 1F (parallel with 1G)
 3B can start after 3A + 1F
 4 can start after 1E-2 + 3B
+5A can start after 1E-2
+5B can start after 5A
+5C can start after 5B
 ```
 
 ## Issues Log

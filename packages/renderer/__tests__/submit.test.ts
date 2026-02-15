@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { submitResponses } from "../src/submit/handler";
 import { submitToWebhook } from "../src/submit/webhook";
 import { flattenForSheets } from "../src/submit/sheets";
+import { saveToLocal } from "../src/submit/local";
 import type { FormSchema, FormResponse } from "@formant/core";
+
+vi.mock("../src/submit/local", () => ({
+  saveToLocal: vi.fn().mockResolvedValue(undefined),
+}));
 
 // ─── Mock fetch globally ───
 
@@ -11,6 +16,7 @@ const mockFetch = vi.fn();
 beforeEach(() => {
   vi.stubGlobal("fetch", mockFetch);
   mockFetch.mockReset();
+  vi.mocked(saveToLocal).mockClear();
 });
 
 afterEach(() => {
@@ -209,6 +215,35 @@ describe("submitResponses", () => {
     expect(mockClick).toHaveBeenCalledOnce();
 
     createElementSpy.mockRestore();
+  });
+
+  it("with local destination calls saveToLocal and returns success (no Excel download)", async () => {
+    const schema: FormSchema = {
+      ...baseSchema,
+      submit: {
+        destinations: [{ type: "local" }],
+      },
+    };
+
+    const results = await submitResponses(schema, answers, metadata);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.destination).toBe("local");
+    expect(results[0]?.success).toBe(true);
+
+    expect(saveToLocal).toHaveBeenCalledOnce();
+    expect(saveToLocal).toHaveBeenCalledWith(
+      "test-form",
+      expect.objectContaining({
+        formId: "test-form",
+        status: "completed",
+        submittedAt: expect.any(String),
+        answers: { name: "Alice" },
+      })
+    );
+
+    // No fetch, no Excel download
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("returns empty array when no destinations configured", async () => {
