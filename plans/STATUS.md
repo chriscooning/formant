@@ -64,7 +64,7 @@ Record any issues found during implementation that affect other phases.
 | 2026-02-14 | 1B | **yes_no validator rejected booleans.** Validator expected string labels ("Yes"/"No") but YesNo component stores booleans. Blocked Y/N keyboard test. | **Resolved.** Updated `validate.ts` to accept `true`/`false` as valid yes_no values alongside string labels. |
 | 2026-02-14 | 1G | **Branching test selector ambiguity.** `selectChoice("Unsatisfied")` matched both "Unsatisfied" and "Very unsatisfied" due to substring `hasText` matching. | **Resolved.** Changed to exact regex match on `.ff-choice-label` text in `branching.spec.ts`. |
 | 2026-02-14 | 1F | **ESM `__dirname` not defined in cli.ts.** `packages/html-builder/src/cli.ts` used `__dirname` which is undefined in ES module scope. Deploy case failed. | **Resolved.** Added `fileURLToPath` import and `__filename`/`__dirname` polyfill at top of file. |
-| 2026-02-14 | Deploy | **Vercel CLI v50+ non-TTY deploy fails silently.** `scripts/deploy-vercel.sh` returns JSON `action_required` blob instead of deploying when run from non-interactive environments. | **Resolved.** Added `[[ ! -t 0 ]]` guard after auth check with helpful error message and manual deploy instructions. |
+| 2026-02-14 | Deploy | **Vercel CLI v50+ non-TTY deploy fails silently.** `scripts/deploy-vercel.sh` returns JSON `action_required` blob instead of deploying when run from non-interactive environments. | **Resolved.** Replaced with pty-based deploy: removed non-TTY guard, use `script` to fake TTY for scope, lowercase deploy dir (`formant-form`), VERCEL_ORG_ID/VERCEL_SCOPE for CI. |
 
 ### Resolved: __dirname in ESM cli.ts
 
@@ -78,7 +78,7 @@ const __dirname = path.dirname(__filename);
 
 ### Resolved: Vercel CLI v50+ non-TTY deploy
 
-`scripts/deploy-vercel.sh` fails silently when run in non-interactive environments (CI, subprocess, Cursor agent shell) due to Vercel CLI v50+ requiring interactive scope selection. Instead of deploying, it returns a JSON `"action_required"` blob. **Fixed** by adding a non-TTY guard (`[[ ! -t 0 ]]`) after the auth check that exits with a helpful error message and manual deploy instructions.
+`scripts/deploy-vercel.sh` fails silently when run in non-interactive environments (CI, subprocess, Cursor agent shell) due to Vercel CLI v50+ requiring interactive scope selection. Instead of deploying, it returns a JSON `"action_required"` blob. **Fixed** by removing the non-TTY guard and implementing a pty-based deploy: when the first deploy fails with `missing_scope`, parse the scope slug from the JSON and retry inside `script -q -c "..."` so the CLI gets a pseudo-TTY and accepts `--scope`. Deploy dir is now `formant-form` (lowercase) to avoid project name rejection. For CI, set `VERCEL_ORG_ID` or `VERCEL_SCOPE` to skip scope detection. Requires `script` (bsdutils) for non-interactive deploys.
 
 ### Resolved: Stale Closure Auto-Advance (Phase 1D) + yes_no Validator + Branching Selector
 

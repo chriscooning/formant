@@ -27,6 +27,8 @@ The AI handles the rest — generates the schema, builds the HTML, and asks how 
 
 Or just run `pnpm deploy forms/my-form.html` for an interactive menu.
 
+**Vercel (non-interactive / CI):** Non-interactive deploys (e.g. from Cursor agent or CI) require `script` (Debian/Ubuntu: `apt install bsdutils`). For CI, set `VERCEL_ORG_ID` or `VERCEL_SCOPE` to skip scope detection.
+
 ## Manual CLI Usage
 
 ```bash

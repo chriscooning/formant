@@ -213,6 +213,34 @@ html, body {
   border-color: var(--ff-accent);
 }
 
+.ff-textarea-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.ff-textarea-ok {
+  background: var(--ff-accent);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: var(--ff-font-sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--ff-transition);
+}
+
+.ff-textarea-ok:hover {
+  background: var(--ff-accent-hover);
+  transform: translateY(-1px);
+}
+
+.ff-textarea-ok:active {
+  transform: translateY(0);
+}
+
 .ff-date-input {
   border: none;
   border-bottom: 1px solid var(--ff-border);

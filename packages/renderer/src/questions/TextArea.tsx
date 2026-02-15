@@ -44,7 +44,7 @@ export const TextArea: React.FC<QuestionProps<string>> = ({
         rows={textAreaField.rows ?? 4}
         maxLength={textAreaField.maxLength}
       />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="ff-textarea-actions">
         {hasContent && (
           <button
             type="button"

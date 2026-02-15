@@ -38,37 +38,18 @@ fi
 echo "Authenticated as: $(vercel whoami 2>/dev/null)"
 echo ""
 
-# ─── Non-TTY guard ───
-# Vercel CLI v50+ requires an interactive terminal for first-time project
-# setup / scope selection. In non-TTY environments (CI, subprocess, Cursor
-# agent shell) it returns a JSON "action_required" blob instead of deploying.
-
-if [[ ! -t 0 ]]; then
-  echo ""
-  echo "ERROR: Vercel deploy requires an interactive terminal for first-time project setup."
-  echo ""
-  echo "Run this command directly in your terminal:"
-  echo ""
-  echo "  pnpm formant deploy $1 --target vercel"
-  echo ""
-  echo "Or deploy manually:"
-  echo ""
-  echo "  DEPLOY_DIR=\$(mktemp -d)"
-  echo "  cp $(cd "$(dirname "$1")" && pwd)/$(basename "$1") \"\$DEPLOY_DIR/index.html\""
-  echo "  cd \"\$DEPLOY_DIR\" && vercel"
-  echo ""
-  exit 1
-fi
-
 # ─── Deploy ───
 
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
-cp "$HTML_FILE" "$TMPDIR/index.html"
+# Use lowercase dir name — Vercel uses it for project name and rejects uppercase
+DEPLOY_DIR="$TMPDIR/formant-form"
+mkdir -p "$DEPLOY_DIR"
+cp "$HTML_FILE" "$DEPLOY_DIR/index.html"
 
 # Minimal Vercel config — static SPA, single page
-cat > "$TMPDIR/vercel.json" <<'VERCEL'
+cat > "$DEPLOY_DIR/vercel.json" <<'VERCEL'
 {
   "version": 2,
   "cleanUrls": true,
@@ -79,24 +60,58 @@ VERCEL
 echo "Deploying $(basename "$HTML_FILE") to Vercel..."
 echo ""
 
-cd "$TMPDIR"
-DEPLOY_URL=$(vercel --yes 2>&1 | tail -1)
+cd "$DEPLOY_DIR"
+# --yes and --non-interactive use defaults for first-time project setup.
+# In non-interactive mode Vercel requires --scope; we try without first, then
+# parse action_required/missing_scope and retry with the first available scope.
+# For CI, set VERCEL_ORG_ID (or VERCEL_SCOPE) to skip scope detection.
+VERCEL_SCOPE="${VERCEL_ORG_ID:-${VERCEL_SCOPE:-}}"
 
-echo ""
-echo "  ✓ Deployed to: $DEPLOY_URL"
-echo ""
-echo "  To deploy to production, run:"
-echo "    vercel --prod --yes"
-echo ""
+deploy_with_scope() {
+  if [[ -n "$VERCEL_SCOPE" ]]; then
+    vercel --yes --non-interactive --scope "$VERCEL_SCOPE"
+  else
+    vercel --yes --non-interactive
+  fi
+}
 
-# ─── Optional Google Sheets setup ───
-
-read -rp "Set up Google Sheets for response collection? (y/N): " sheets_choice
-if [[ "${sheets_choice:-N}" =~ ^[Yy] ]]; then
-  exec bash "$SCRIPT_DIR/setup-sheets.sh"
+if ! deploy_with_scope >"$TMPDIR/vercel.out" 2>&1; then
+  # In non-interactive mode, Vercel may return action_required/missing_scope and
+  # ignores --scope when it detects non-TTY. Use `script` to fake a TTY so
+  # --scope is respected. Parse scope slug from the suggested command.
+  SCOPE=$(grep "vercel" "$TMPDIR/vercel.out" 2>/dev/null | grep -oE '\-\-scope [a-zA-Z0-9_-]+' | head -1 | awk '{print $2}')
+  if [[ -n "$SCOPE" ]]; then
+    echo "Using scope: $SCOPE (set VERCEL_ORG_ID to skip this)"
+    # script -q -c "cmd" /dev/null runs cmd in a pty so Vercel accepts --scope
+    if command -v script &>/dev/null; then
+      script -q -c "vercel link --yes --scope $SCOPE && vercel --yes --non-interactive" /dev/null
+    else
+      echo "Install 'script' (bsdutils) for non-interactive deploy, or run in a real terminal." >&2
+      exit 1
+    fi
+  else
+    cat "$TMPDIR/vercel.out"
+    echo ""
+    echo "For non-interactive deploys, set VERCEL_ORG_ID or VERCEL_SCOPE to your team/org ID."
+    exit 1
+  fi
 else
-  echo ""
-  echo "  No problem — responses will download as Excel by default."
-  echo "  You can set up Sheets later with: bash scripts/setup-sheets.sh"
-  echo ""
+  cat "$TMPDIR/vercel.out"
 fi
+
+echo ""
+echo "  ✓ Deployed. URL is shown above."
+echo "  To deploy to production: vercel --prod --yes"
+echo ""
+
+# ─── Optional Google Sheets setup (interactive only) ───
+
+if [[ -t 0 ]]; then
+  read -rp "Set up Google Sheets for response collection? (y/N): " sheets_choice
+  if [[ "${sheets_choice:-N}" =~ ^[Yy] ]]; then
+    exec bash "$SCRIPT_DIR/setup-sheets.sh"
+  fi
+fi
+echo ""
+echo "  Responses download as Excel by default. Set up Sheets later with: bash scripts/setup-sheets.sh"
+echo ""
