@@ -55,6 +55,22 @@ Record any issues found during implementation that affect other phases.
 | 2026-02-14 | 1D | **Choice/Rating/Scale/YesNo stale-closure auto-advance bug.** See detailed description below. | **Resolved.** Added `onNextRef` pattern (useRef for latest `onNext`) in all four components. Fixed `useCallback`/dep arrays for keyboard handler in `Choice.tsx`. |
 | 2026-02-14 | 1B | **yes_no validator rejected booleans.** Validator expected string labels ("Yes"/"No") but YesNo component stores booleans. Blocked Y/N keyboard test. | **Resolved.** Updated `validate.ts` to accept `true`/`false` as valid yes_no values alongside string labels. |
 | 2026-02-14 | 1G | **Branching test selector ambiguity.** `selectChoice("Unsatisfied")` matched both "Unsatisfied" and "Very unsatisfied" due to substring `hasText` matching. | **Resolved.** Changed to exact regex match on `.ff-choice-label` text in `branching.spec.ts`. |
+| 2026-02-14 | 1F | **ESM `__dirname` not defined in cli.ts.** `packages/html-builder/src/cli.ts` used `__dirname` which is undefined in ES module scope. Deploy case failed. | **Resolved.** Added `fileURLToPath` import and `__filename`/`__dirname` polyfill at top of file. |
+| 2026-02-14 | Deploy | **Vercel CLI v50+ non-TTY deploy fails silently.** `scripts/deploy-vercel.sh` returns JSON `action_required` blob instead of deploying when run from non-interactive environments. | **Resolved.** Added `[[ ! -t 0 ]]` guard after auth check with helpful error message and manual deploy instructions. |
+
+### Resolved: __dirname in ESM cli.ts
+
+`packages/html-builder/src/cli.ts` used `__dirname` which is undefined in ES module scope. The `deploy` case relied on `__dirname` to resolve the path to `scripts/deploy.sh`. **Fixed** by adding `fileURLToPath` polyfill at the top of the file:
+
+```ts
+import { fileURLToPath } from "node:url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+```
+
+### Resolved: Vercel CLI v50+ non-TTY deploy
+
+`scripts/deploy-vercel.sh` fails silently when run in non-interactive environments (CI, subprocess, Cursor agent shell) due to Vercel CLI v50+ requiring interactive scope selection. Instead of deploying, it returns a JSON `"action_required"` blob. **Fixed** by adding a non-TTY guard (`[[ ! -t 0 ]]`) after the auth check that exits with a helpful error message and manual deploy instructions.
 
 ### Resolved: Stale Closure Auto-Advance (Phase 1D) + yes_no Validator + Branching Selector
 

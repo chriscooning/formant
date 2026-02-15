@@ -242,6 +242,90 @@ html, body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 12b. Multi-choice (select-all-that-apply) */
+.ff-multi-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ff-multi-card {
+  border: 1px solid var(--ff-border);
+  padding: 10px 18px;
+  border-radius: var(--ff-radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  color: var(--ff-text);
+  font-family: var(--ff-font-sans);
+  font-size: 14px;
+  transition: all var(--ff-transition);
+  animation: ff-stagger-in 0.3s ease forwards;
+  opacity: 0;
+}
+
+.ff-multi-card:hover {
+  border-color: var(--ff-border-hover);
+  background: var(--ff-surface-hover);
+  transform: translateY(-1px);
+}
+
+.ff-multi-card--selected {
+  border-color: var(--ff-accent);
+  background: var(--ff-accent-glow);
+}
+
+.ff-multi-check {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ff-border);
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: all var(--ff-transition);
+  position: relative;
+}
+
+.ff-multi-check--checked {
+  background: var(--ff-accent);
+  border-color: var(--ff-accent);
+}
+
+.ff-multi-check--checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 4px;
+  height: 8px;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(45deg);
+}
+
+.ff-multi-continue {
+  display: inline-block;
+  margin-top: 20px;
+  background: transparent;
+  border: 1px solid var(--ff-border);
+  color: var(--ff-text);
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-family: var(--ff-font-sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--ff-transition);
+}
+
+.ff-multi-continue:hover {
+  border-color: var(--ff-accent);
+  background: var(--ff-accent-glow);
+  transform: translateY(-1px);
+}
+
 /* 13. Rating stars */
 .ff-rating-stars { display: flex; gap: 8px; }
 .ff-star { font-size: 28px; cursor: pointer; transition: color var(--ff-transition); color: var(--ff-text-muted); }
@@ -629,6 +713,8 @@ html, body {
   .ff-question-title { font-size: 18px; }
   .ff-yesno { grid-template-columns: 1fr; }
   .ff-choice-card { padding: 20px 16px; }
+  .ff-multi-list { gap: 8px; }
+  .ff-multi-card { padding: 8px 14px; font-size: 13px; }
   .ff-scale-buttons { gap: 4px; }
   .ff-scale-btn { min-width: 36px; height: 36px; }
 }

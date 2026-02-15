@@ -38,6 +38,28 @@ fi
 echo "Authenticated as: $(vercel whoami 2>/dev/null)"
 echo ""
 
+# ─── Non-TTY guard ───
+# Vercel CLI v50+ requires an interactive terminal for first-time project
+# setup / scope selection. In non-TTY environments (CI, subprocess, Cursor
+# agent shell) it returns a JSON "action_required" blob instead of deploying.
+
+if [[ ! -t 0 ]]; then
+  echo ""
+  echo "ERROR: Vercel deploy requires an interactive terminal for first-time project setup."
+  echo ""
+  echo "Run this command directly in your terminal:"
+  echo ""
+  echo "  pnpm formant deploy $1 --target vercel"
+  echo ""
+  echo "Or deploy manually:"
+  echo ""
+  echo "  DEPLOY_DIR=\$(mktemp -d)"
+  echo "  cp $(cd "$(dirname "$1")" && pwd)/$(basename "$1") \"\$DEPLOY_DIR/index.html\""
+  echo "  cd \"\$DEPLOY_DIR\" && vercel"
+  echo ""
+  exit 1
+fi
+
 # ─── Deploy ───
 
 TMPDIR="$(mktemp -d)"
