@@ -37,6 +37,7 @@ while [[ $# -gt 0 ]]; do
       echo "  Vercel options:"
       echo "    --with-admin       Include admin panel (form + admin, IndexedDB responses)"
       echo "    --with-sheets      Deploy Worker first, then form + admin with Connect Google Sheet"
+      echo "    --with-backend     Deploy Vercel API + Postgres, upload form, generate dashboard"
       echo "    --admin-password   Admin password for --with-admin (or FORMANT_ADMIN_PASSWORD env)"
       echo ""
       echo "  If --target is omitted, an interactive menu is shown."

@@ -29,9 +29,12 @@ The AI handles the rest — generates the schema, builds the HTML, and asks how 
 | **Vercel** | Shareable public URL | `pnpm formant deploy forms/my-form.html --target vercel` |
 | **Vercel + admin** | Form + admin, IndexedDB responses | `pnpm formant deploy forms/my-form.html --target vercel --with-admin` |
 | **Vercel + Sheets** | Connect Google Sheet (one-click OAuth) | `pnpm formant deploy forms/my-form.html --target vercel --with-sheets` |
+| **Vercel + Postgres** | Production: Vercel hosting + server-side storage | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
 | **Cloudflare** | Production: hosting + response collection | `pnpm formant deploy forms/my-form.html --target cloudflare` |
 
 Or run `pnpm formant deploy forms/my-form.html` for an interactive menu. (Use `pnpm formant deploy` — `pnpm deploy` is a built-in pnpm command.)
+
+**Vercel + Postgres:** Requires `vercel postgres create` and migrations. See `plans/deploy-vercel-conventions.md`.
 
 **Vercel (non-interactive / CI):** Non-interactive deploys (e.g. from Cursor agent or CI) require `script` (Debian/Ubuntu: `apt install bsdutils`). For CI, set `VERCEL_ORG_ID` or `VERCEL_SCOPE` to skip scope detection.
 
@@ -61,7 +64,8 @@ pnpm formant deploy forms/my-form.html                  # deploy (interactive me
 - **React 18** — functional components for form rendering
 - **esbuild** — bundles forms into single HTML files
 - **Hono** — lightweight API framework (Cloudflare Workers)
-- **Cloudflare D1** — SQLite database for hosted response collection
+- **Cloudflare D1** — SQLite database for hosted response collection (Cloudflare)
+- **Vercel Postgres** — Postgres for hosted response collection (Vercel + --with-backend)
 - **Vitest** + **Playwright** — unit and E2E testing
 - **pnpm workspaces** — monorepo package management
 
@@ -73,7 +77,8 @@ formant/
 │   ├── core/          # Types, validation, form engine (no React)
 │   ├── renderer/      # React components for rendering forms
 │   ├── html-builder/  # Bundles schema → single HTML file + CLI
-│   └── service/       # Cloudflare Workers API (Hono + D1)
+│   ├── service/         # Cloudflare Workers API (Hono + D1)
+│   └── service-vercel/  # Vercel Edge API (Hono + Postgres) — same interface as service
 ├── apps/
 │   └── e2e/           # Playwright end-to-end tests
 ├── forms/             # Built forms (JSON schemas tracked, HTML gitignored)
