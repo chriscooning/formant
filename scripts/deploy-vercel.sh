@@ -185,6 +185,9 @@ if [[ "$WITH_BACKEND" == true ]]; then
 
   if [[ "$HTTP_CODE" -lt 200 || "$HTTP_CODE" -ge 300 ]]; then
     echo "Error uploading form (HTTP $HTTP_CODE): $BODY" >&2
+    if [[ "$HTTP_CODE" -ge 500 ]]; then
+      echo "Form upload failed. Add a database first — see docs/setup-vercel-postgres.md" >&2
+    fi
     exit 1
   fi
 

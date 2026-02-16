@@ -3,6 +3,8 @@ name: formant
 description: Generate interactive HTML forms from natural language. Use when the user wants to create a form, survey, questionnaire, registration page, or feedback form. Also use when mentioning Formant, form schemas, or form building.
 ---
 
+> **Role:** Cursor IDE skill. Used when Formant skill is active. Focus: deploy workflow, decision trees, quick reference. When deploy options change, update this file. Schema changes: also update `skill/SKILL.md`.
+
 # Formant — Build Forms from Natural Language
 
 Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained single HTML files with keyboard navigation, dark/light mode, smooth transitions, and multiple submit destinations.
@@ -11,7 +13,8 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 
 1. **Ask** what the user wants to collect **before** generating the schema:
    - **Questions and branching logic** — what to ask, in what order, any conditional flows
-- **Response collection** — where should responses go?
+   - **Branding / theme** — *"Do you have a website URL I should match for colors and fonts?"* If they provide a URL, fetch it, extract the primary/accent color and font family, and add a `theme` block to the schema. Use `theme: { accent, accentHover?, defaultMode: "auto" }`.
+   - **Response collection** — where should responses go?
     - **Excel download** (default, client-side) — works everywhere, no setup
     - **Connect Google Sheet** (one-click OAuth) — requires Worker + admin; use `--with-sheets` for Vercel
     - **Google Sheets** (Apps Script) — requires `scripts/setup-sheets.sh`
@@ -28,7 +31,7 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
    ```
    This produces both `forms/<name>.html` and `forms/<name>.json` (schema copy).
 5. **Ask** the user: "How would you like to host this form?"
-   - **Share with others** — Vercel + Postgres or Cloudflare (recommended for production)
+   - **Share with others** — Cloudflare (recommended — one command, database included). Vercel requires manual Postgres setup.
    - **Preview / test** — Offline or preview
    - **Special needs** — Vercel + Sheets (Google Sheets), Local (kiosk)
    - Hosting is separate from response collection: Excel and Sheets work on all targets.
@@ -37,7 +40,7 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 
 ### Recommended
 
-**Share with others:** `pnpm formant deploy <form.html> --target vercel --with-backend` or `--target cloudflare` — shareable URL, server-side storage, dashboard.
+**Share with others:** `pnpm formant deploy <form.html> --target cloudflare` — one command, database included, no setup. Vercel + Postgres also supported but requires adding a database first (see `docs/setup-vercel-postgres.md`).
 
 **Preview / test locally:** `pnpm formant deploy <form.html> --target offline` or `pnpm formant preview <schema.json>`.
 
@@ -47,12 +50,16 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 |--------|----------|---------------------|---------|
 | **Offline** | Testing, internal use, email the file | Excel download on submit | `pnpm formant deploy <form.html> --target offline` |
 | **Local** | Kiosk mode, iPad, no network | IndexedDB (form + admin panel) | `pnpm formant build forms/<name>.json --local` |
+| **Cloudflare** | Production: one command, no setup | D1 + dashboard | `pnpm formant deploy <form.html> --target cloudflare` |
 | **Vercel** | Shareable public URL, no server-side storage | Excel download (or add Google Sheets) | `pnpm formant deploy <form.html> --target vercel` |
 | **Vercel + Sheets** | Connect Google Sheet (one-click OAuth) | Worker + form + admin | `pnpm formant deploy <form.html> --target vercel --with-sheets` |
 | **Vercel + Postgres** | Production: Vercel + server-side storage | Postgres + dashboard | `pnpm formant deploy <form.html> --target vercel --with-backend` |
-| **Cloudflare** | Production: hosting + response DB | D1 + dashboard | `pnpm formant deploy <form.html> --target cloudflare` |
 
-**Deploy decision tree:** Share with others → Vercel + Postgres or Cloudflare. Test locally → Offline or preview. Google Sheets → `--with-sheets`. Kiosk/offline → `--local`.
+**Deploy decision tree:** Share with others → Cloudflare (recommended). "Deploy to Vercel" → Recommend Cloudflare first; if they insist, use `--target vercel --with-backend` and point to `docs/setup-vercel-postgres.md`. Test locally → Offline or preview. Google Sheets → `--with-sheets`. Kiosk/offline → `--local`.
+
+**When user says "deploy to Vercel":** Recommend Cloudflare first: *"For the smoothest experience, I recommend Cloudflare — one command, database included. Shall I use that?"* If they agree → `--target cloudflare`. If they insist → `--target vercel --with-backend`, and tell them: *"Vercel requires adding a database first. See docs/setup-vercel-postgres.md for the 3 steps. Run deploy again after completing them."*
+
+**When Cloudflare deploy fails (D1 creation):** The script shows wrangler output and next steps. Suggest: run `cd packages/service && pnpm exec wrangler login` if needed; enable Workers at the Cloudflare dashboard; or create the D1 database manually and add `database_id` to `packages/service/wrangler.toml`. See `docs/setup-cloudflare-d1.md`.
 
 **Use `pnpm formant deploy`** (not `pnpm deploy` — that's pnpm's built-in). Run without `--target` for an interactive menu. See `docs/deploy-options.md` for full details.
 
@@ -110,7 +117,7 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 
 **Rule:** Always include Excel or CSV in `submit.destinations` unless the user explicitly opts out. Multiple destinations fire in parallel.
 
-**Example:** *"I'll need a few details before building. What questions do you want to ask, and where should responses go — Excel download, Google Sheets, a webhook URL, or Cloudflare D1? I'll include Excel as a fallback unless you prefer otherwise."*
+**Example:** *"I'll need a few details before building. What questions do you want to ask? Do you have a website URL I should match for branding? And where should responses go — Excel download, Google Sheets, a webhook URL, or Cloudflare D1? I'll include Excel as a fallback unless you prefer otherwise."*
 
 ## Submit Destinations
 
@@ -170,9 +177,9 @@ pnpm formant deploy <form.html>
 
 # Deploy (skip menu)
 pnpm formant deploy <form.html> --target offline      # open in browser
+pnpm formant deploy <form.html> --target cloudflare   # deploy to Cloudflare (recommended, one command)
 pnpm formant deploy <form.html> --target vercel       # deploy to Vercel
 pnpm formant deploy <form.html> --target vercel --with-sheets  # Worker + form + admin, Connect Google Sheet
-pnpm formant deploy <form.html> --target cloudflare   # deploy to Cloudflare Workers
 
 # Local/kiosk: build produces form.html + form-admin.html
 export FORMANT_ADMIN_PASSWORD=your-secret

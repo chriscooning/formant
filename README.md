@@ -33,12 +33,12 @@ The AI handles the rest — generates the schema, builds the HTML, and asks how 
 
 | Option | Command |
 |--------|---------|
-| **Vercel + Postgres** | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
 | **Cloudflare** | `pnpm formant deploy forms/my-form.html --target cloudflare` |
+| **Vercel + Postgres** | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
 
-Both give you a shareable URL, server-side storage, dashboard, and CSV/XLSX export.
+**Deploy with one command:** `pnpm formant deploy form.html --target cloudflare` — includes database, no setup.
 
-**Minimal setup:** Cloudflare or Vercel account + CLI login. For Vercel + Postgres, run `vercel postgres create` once in the project; migrations run on deploy. See [plans/deploy-vercel-conventions.md](plans/deploy-vercel-conventions.md).
+Both give you a shareable URL, server-side storage, dashboard, and CSV/XLSX export. Cloudflare requires no setup beyond `wrangler login`. For Vercel + Postgres, add a database in the Vercel UI first — see [docs/setup-vercel-postgres.md](docs/setup-vercel-postgres.md).
 
 ### Preview / test locally
 

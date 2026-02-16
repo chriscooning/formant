@@ -59,28 +59,61 @@ else
     echo "No D1 database configured. Creating one..."
     echo ""
 
-    # Create the database
+    # Create the database (disable set -e so we can capture and handle failure)
+    set +e
     CREATE_OUTPUT=$($WRANGLER d1 create formant-db 2>&1)
-    echo "$CREATE_OUTPUT"
+    CREATE_EXIT=$?
+    set -e
 
-    # Parse database_id from output
-    DB_ID=$(echo "$CREATE_OUTPUT" | grep -oP 'database_id\s*=\s*"\K[^"]+' || \
-            echo "$CREATE_OUTPUT" | grep -oP '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+    # Parse database_id from output (grep exits 1 on no match — use set +e to avoid script exit)
+    set +e
+    DB_ID=$(echo "$CREATE_OUTPUT" | grep -oP 'database_id\s*=\s*"\K[^"]+' 2>/dev/null)
+    [[ -z "$DB_ID" ]] && DB_ID=$(echo "$CREATE_OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+    set -e
 
     if [[ -z "$DB_ID" ]]; then
-      echo "Error: could not parse database_id from wrangler output." >&2
-      echo "Create the database manually and update wrangler.toml" >&2
-      exit 1
+      # "Already exists" — try to get the ID from wrangler d1 list and patch wrangler.toml
+      if echo "$CREATE_OUTPUT" | grep -q "already exists"; then
+        echo "Database 'formant-db' already exists. Looking up its ID..."
+        set +e
+        LIST_OUTPUT=$($WRANGLER d1 list 2>&1)
+        set -e
+        DB_ID=$(echo "$LIST_OUTPUT" | grep -E "formant-db" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+        if [[ -n "$DB_ID" ]]; then
+          echo "  ✓ Found existing database: $DB_ID"
+          sed -i "s/database_id = \"\"/database_id = \"$DB_ID\"/" "$WRANGLER_TOML"
+          echo "  ✓ Updated wrangler.toml"
+          echo ""
+        else
+          echo "Could not parse database ID from 'wrangler d1 list'. Add it manually:" >&2
+          echo "  1. Run: cd packages/service && pnpm exec wrangler d1 list" >&2
+          echo "  2. Copy the uuid for 'formant-db' into wrangler.toml database_id" >&2
+          exit 1
+        fi
+      else
+        echo "D1 database creation failed. Output:" >&2
+        echo "$CREATE_OUTPUT" >&2
+        echo "" >&2
+        echo "Common fixes:" >&2
+        echo "  1. Run 'cd packages/service && pnpm exec wrangler login' if not logged in" >&2
+        echo "  2. Enable Workers: https://dash.cloudflare.com/?to=/:account/workers/onboarding" >&2
+        echo "  3. Create manually: Dashboard → Workers & Pages → D1 → Create database" >&2
+        echo "     Then add database_id to packages/service/wrangler.toml and run deploy again" >&2
+        echo "" >&2
+        echo "See docs/setup-cloudflare-d1.md for details" >&2
+        exit 1
+      fi
+    else
+      # Create succeeded — patch wrangler.toml
+      echo "$CREATE_OUTPUT"
+      sed -i "s/database_id = \"\"/database_id = \"$DB_ID\"/" "$WRANGLER_TOML"
+      echo ""
+      echo "  ✓ Database created: $DB_ID"
+      echo "  ✓ Updated wrangler.toml"
+      echo ""
     fi
 
-    # Patch wrangler.toml with the new database_id
-    sed -i "s/database_id = \"\"/database_id = \"$DB_ID\"/" "$WRANGLER_TOML"
-    echo ""
-    echo "  ✓ Database created: $DB_ID"
-    echo "  ✓ Updated wrangler.toml"
-    echo ""
-
-    # Run migration
+    # Run migration (for both create success and "already exists" recovery)
     echo "Running database migration..."
     $WRANGLER d1 execute formant-db --remote --file="$SERVICE_DIR/src/db/schema.sql"
     echo "  ✓ Migration applied"

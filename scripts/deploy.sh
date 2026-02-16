@@ -79,15 +79,15 @@ if [[ -z "$TARGET" ]]; then
   echo "  How do you want to deploy $(basename "$HTML_FILE")?"
   echo ""
   echo "  1) Offline    — Open in browser, responses download as Excel"
-  echo "  2) Vercel     — Static hosting with a shareable URL"
-  echo "  3) Cloudflare — Full-stack hosting with built-in response collection"
+  echo "  2) Cloudflare — Shareable URL + database (recommended, one command)"
+  echo "  3) Vercel     — Shareable URL + database (create DB in Vercel UI first)"
   echo ""
   read -rp "  Choose [1/2/3]: " choice
 
   case "$choice" in
     1) TARGET="offline" ;;
-    2) TARGET="vercel" ;;
-    3) TARGET="cloudflare" ;;
+    2) TARGET="cloudflare" ;;
+    3) TARGET="vercel" ;;
     *)
       echo "Invalid choice: $choice" >&2
       exit 1
