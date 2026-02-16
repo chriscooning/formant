@@ -1,42 +1,20 @@
 # Formant — Product & Developer Experience
 
-## For Developers
+Formant turns natural language into deployable forms. Clone the repo, open it in Cursor, and describe what you want. The AI generates the schema, builds a single HTML file, and helps you deploy.
 
-### AI-Native
+## Build
 
-- **Cursor / Claude compatible** — Describe what you want in chat, get a working form
-- **Claude Skill** — Formant teaches AI how to generate valid schemas and deploy
-- **Natural language to form** — "I want a customer feedback form with a 5-star rating" → done
+Describe your form in chat — "I want a customer feedback form with a 5-star rating and comments" — and Formant produces a valid schema. The built-in skill teaches the AI how to generate schemas, build HTML, and choose the right deploy path. No form builder UI, no config files. Just conversation.
 
-### One-Command Deploy
+Forms are **self-contained single HTML files**. They work anywhere: email, local, hosted. No backend required — Excel download and webhooks work out of the box. Add Cloudflare or Vercel when you need server-side storage.
 
-- **Vercel + Postgres** — Shareable URL, server-side storage, dashboard
-- **Cloudflare** — Same, with D1
-- **Vercel + Sheets** — Connect Google Sheet (one-click OAuth)
+## Deploy
 
-### One-Click Google Sheets
+- **Share with others** — Vercel + Postgres or Cloudflare. Shareable URL, server-side storage, dashboard, CSV/XLSX export.
+- **Preview locally** — Offline mode opens the form in your browser; responses download as Excel or CSV.
+- **Google Sheets** — One-click OAuth. Deploy with `--with-sheets`, connect in the admin panel. No clasp, no manual setup.
+- **Kiosk / offline** — Build with `--local` for form + admin; copy to device, no network needed.
 
-- **OAuth flow** — No clasp, no manual setup, no copying URLs
-- **One setup, unlimited forms** — Configure Google Cloud once, connect as many forms as you want
-- **Per-form sheets** — Each form gets its own sheet and Apps Script automatically
-- **Developer ergonomics** — Spin up forms, connect to Sheets, ship
+## For People Filling Out Forms
 
-### Self-Contained & Portable
-
-- **Single HTML file** — Forms work anywhere: email, local, hosted
-- **No backend required** — Excel download, webhooks, or optional Cloudflare/Vercel
-- **Offline-first** — IndexedDB for local/kiosk mode
-
-### Modern Stack
-
-- **TypeScript strict mode** — Across all packages
-- **React 18** — Functional components, CDN-bundled
-- **Cloudflare Workers + D1** — Edge-first when you need it
-- **pnpm workspaces** — Monorepo, fast installs
-
-## For End Users
-
-- **Conversational form** — One question at a time, smooth transitions
-- **Dark/light mode** — System detection + manual toggle
-- **Keyboard navigation** — Power users love it
-- **Multiple destinations** — Excel, Sheets, webhook, Cloudflare — or all at once
+One question at a time, smooth transitions. Dark/light mode (system or manual). Keyboard navigation. Responses can go to Excel, Sheets, webhooks, or your backend — or all at once.

@@ -88,6 +88,34 @@ afterEach(() => {
 // ─── Tests ───
 
 describe("Formant", () => {
+  it("applies theme accent to root when schema has theme", () => {
+    const schemaWithTheme: FormSchema = {
+      ...testSchema,
+      theme: { accent: "#c45c26", radius: "12px" },
+    };
+    render(<Formant schema={schemaWithTheme} />);
+
+    const root = container.querySelector(".ff-root") as HTMLElement;
+    expect(root).not.toBeNull();
+    const style = root.getAttribute("style") ?? "";
+    expect(style).toContain("--ff-accent: #c45c26");
+    expect(style).toContain("--ff-radius: 12px");
+  });
+
+  it("derives accentHover and accentGlow when only accent provided", () => {
+    const schemaWithTheme: FormSchema = {
+      ...testSchema,
+      theme: { accent: "#6c5ce7" },
+    };
+    render(<Formant schema={schemaWithTheme} />);
+
+    const root = container.querySelector(".ff-root") as HTMLElement;
+    const style = root.getAttribute("style") ?? "";
+    expect(style).toContain("--ff-accent: #6c5ce7");
+    expect(style).toContain("--ff-accent-hover:");
+    expect(style).toContain("--ff-accent-glow:");
+  });
+
   it("renders welcome screen for a schema starting with welcome field", () => {
     render(<Formant schema={testSchema} />);
 

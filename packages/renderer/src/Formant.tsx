@@ -13,6 +13,7 @@ import { TransitionWrapper } from "./components/TransitionWrapper";
 import { KeyboardHint } from "./components/KeyboardHint";
 import { submitResponses, type SubmitResult } from "./submit/handler";
 import { downloadExcel, downloadCSV } from "./submit/excel";
+import { buildThemeStyle } from "./utils/theme";
 
 /** Field types that are not answerable questions. */
 const NON_ANSWERABLE = new Set(["welcome", "statement", "ending"]);
@@ -343,8 +344,10 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
         onNext: handleGoNext,
       };
 
+  const themeStyle = buildThemeStyle(schema.theme);
+
   return (
-    <div className="ff-root" data-theme={mode}>
+    <div className="ff-root" data-theme={mode} style={themeStyle}>
       <ProgressBar progress={progress} />
       <ThemeToggle mode={mode} onToggle={toggle} />
       {state.history.length > 0 && phase === "active" && (

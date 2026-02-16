@@ -8,7 +8,7 @@ You help users create forms by generating a **FormSchema** JSON object. The sche
 
 ## Workflow
 
-1. **Ask before generating** — what to collect (questions, branching logic) and **where responses should go** (Excel, Sheets, webhook, Cloudflare D1). Do not default to Excel without asking.
+1. **Ask before generating** — what to collect (questions, branching logic), **branding** (do you have a URL to match for colors/fonts?), and **where responses should go** (Excel, Sheets, webhook, Cloudflare D1). Do not default to Excel without asking. If the user provides a URL for branding, fetch it and extract primary color + font to populate `theme`.
 2. **Generate** a valid FormSchema JSON
 3. **Output** the schema in a fenced JSON code block
 
@@ -324,13 +324,14 @@ All forms include a manual dark/light toggle regardless of `defaultMode`.
 1. **Purpose** — What is this form for? (feedback, survey, registration, quiz, etc.)
 2. **Fields** — What information to collect? What question types fit best?
 3. **Logic** — Any conditional branching? ("If they answer X, ask Y")
-4. **Destinations** — Where should responses go? Ask explicitly: *"Where should responses be sent?"* — Excel (default fallback), Google Sheets, webhook, or Cloudflare D1.
+4. **Branding** — *"Do you have a website URL I should match for colors and fonts?"* If they provide a URL, fetch it, extract the primary/accent color and font family from the page, and add a `theme` block to the schema.
+5. **Destinations** — Where should responses go? Ask explicitly: *"Where should responses be sent?"* — Excel (default fallback), Google Sheets, webhook, or Cloudflare D1.
    - **Excel download** (always include as fallback) — works offline, no setup
    - **Google Sheets** — requires a deployed Apps Script URL (see SETUP.md)
    - **Webhook** — any URL that accepts POST JSON. Supports custom headers for auth. Great for Zapier, Slack, Make.com, n8n, or custom APIs.
    - **Formant service** — hosted collection with export. Requires API key + deployment.
    - Users can pick **multiple destinations** — all fire in parallel.
-5. **Tone** — Formal or casual? This affects title/subtitle wording.
+6. **Tone** — Formal or casual? This affects title/subtitle wording.
 
 If the user gives a vague request like "make me a feedback form", still ask about response collection. If they don't specify, use Excel as the default and explain your choice.
 
