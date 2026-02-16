@@ -35,7 +35,7 @@ Track which phases are complete. Each agent session should read this first and u
 
 **Next up:** Phase 5 (deploy dashboard) optional — see `plans/connect-sheets-admin-ui.md`.
 
-**Future:** Cloudflare isolated DB mode — `plans/cloudflare-isolated-db-mode.md`.
+**Future:** Cloudflare isolated DB mode — `plans/cloudflare-isolated-db-mode.md`. Agent use — `plans/agent-use-improvements.md`.
 
 ## Execution Order
 
