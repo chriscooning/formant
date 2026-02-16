@@ -225,3 +225,49 @@ This deploys the Cloudflare Worker (API) first, then builds form + admin with `F
    ```
 
 3. Open your admin URL, unlock, and click **Connect Google Sheet**.
+
+---
+
+## Production — Cloudflare (full deploy)
+
+For a full Cloudflare deploy (Worker + D1):
+
+1. Deploy with:
+   ```bash
+   pnpm formant deploy forms/<name>.html --target cloudflare
+   ```
+
+2. Set secrets:
+   ```bash
+   cd packages/service && pnpm exec wrangler secret put GOOGLE_CLIENT_ID
+   pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET
+   ```
+
+3. Add to Google Cloud OAuth client (APIs & Services → Credentials → your OAuth client):
+   - **Authorized JavaScript origins:** Dashboard URL (if deployed) or `http://localhost:5500` for local dashboard
+   - **Authorized redirect URIs:** `https://<your-worker>.workers.dev/api/connect-sheets/callback`
+
+4. Open the dashboard (`forms/<name>-dashboard.html`), paste API key, and click **Connect Google Sheet**.
+
+---
+
+## Production — Vercel + Postgres
+
+For Vercel with Postgres backend:
+
+1. Deploy with:
+   ```bash
+   pnpm formant deploy forms/<name>.html --target vercel --with-backend
+   ```
+
+2. Set env vars in the Vercel project: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+
+3. Add to Google Cloud OAuth client:
+   - **Authorized JavaScript origins:** Dashboard URL (if deployed) or `http://localhost:5500`
+   - **Authorized redirect URIs:** `https://<your-api>.vercel.app/api/connect-sheets/callback`
+
+4. Open the dashboard (`forms/<name>-dashboard.html`), paste API key, and click **Connect Google Sheet**.
+
+---
+
+**Note:** For Connect to work, the dashboard must be served over HTTPS (or localhost). If using the local dashboard file, run `npx serve forms` and open from `http://localhost:5500/<name>-dashboard.html`. Add the dashboard URL to **Authorized JavaScript origins** in Google Cloud.

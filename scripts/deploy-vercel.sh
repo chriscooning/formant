@@ -203,6 +203,7 @@ if [[ "$WITH_BACKEND" == true ]]; then
   TEMPLATE="$ROOT_DIR/.cursor/skills/formant/templates/responses-dashboard.html"
   DASHBOARD_OUT="$ROOT_DIR/forms/${BASENAME}-dashboard.html"
   if [[ -f "$TEMPLATE" ]]; then
+    CONNECT_SHEETS_DOCS_URL="${CONNECT_SHEETS_DOCS_URL:-https://github.com/chriscooning/formant/blob/main/docs/connect-google-sheet-local.md}"
     node -e "
       const fs = require('fs');
       const path = require('path');
@@ -210,12 +211,13 @@ if [[ "$WITH_BACKEND" == true ]]; then
       let t = fs.readFileSync(process.env.TEMPLATE, 'utf-8');
       t = t.replace(/\{\{WORKER_URL\}\}/g, process.env.API_URL || '');
       t = t.replace(/\{\{FORM_ID\}\}/g, process.env.FORM_ID || '');
+      t = t.replace(/\{\{CONNECT_SHEETS_DOCS_URL\}\}/g, process.env.CONNECT_SHEETS_DOCS_URL || '');
       const title = (process.env.FORM_TITLE || 'form').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');
       t = t.replace(/\{\{FORM_TITLE\}\}/g, title);
       t = t.replace(/\{\{SCHEMA_JSON\}\}/, schema);
       fs.mkdirSync(path.dirname(process.env.DASHBOARD_OUT), { recursive: true });
       fs.writeFileSync(process.env.DASHBOARD_OUT, t);
-    " TEMPLATE="$TEMPLATE" DASHBOARD_OUT="$DASHBOARD_OUT" API_URL="$API_URL" FORM_ID="$FORM_ID" FORM_TITLE="$FORM_TITLE" PATCHED_SCHEMA_FILE="$PATCHED_SCHEMA_FILE"
+    " TEMPLATE="$TEMPLATE" DASHBOARD_OUT="$DASHBOARD_OUT" API_URL="$API_URL" FORM_ID="$FORM_ID" FORM_TITLE="$FORM_TITLE" PATCHED_SCHEMA_FILE="$PATCHED_SCHEMA_FILE" CONNECT_SHEETS_DOCS_URL="$CONNECT_SHEETS_DOCS_URL"
   fi
 
   # Use patched HTML for static deploy

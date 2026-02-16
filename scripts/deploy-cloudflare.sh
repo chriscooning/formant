@@ -188,7 +188,8 @@ if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
   TEMPLATE="$ROOT_DIR/.cursor/skills/formant/templates/responses-dashboard.html"
   DASHBOARD_OUT="$ROOT_DIR/forms/${BASENAME}-dashboard.html"
   if [[ -f "$TEMPLATE" ]]; then
-    WORKER_URL="$WORKER_URL" FORM_ID="$FORM_ID" FORM_TITLE="$FORM_TITLE" \
+    CONNECT_SHEETS_DOCS_URL="${CONNECT_SHEETS_DOCS_URL:-https://github.com/chriscooning/formant/blob/main/docs/connect-google-sheet-local.md}"
+    WORKER_URL="$WORKER_URL" FORM_ID="$FORM_ID" FORM_TITLE="$FORM_TITLE" CONNECT_SHEETS_DOCS_URL="$CONNECT_SHEETS_DOCS_URL" \
     TEMPLATE="$TEMPLATE" DASHBOARD_OUT="$DASHBOARD_OUT" JSON_FILE="$JSON_FILE" \
     node -e '
       const fs = require("fs");
@@ -200,6 +201,7 @@ if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
       let t = fs.readFileSync(process.env.TEMPLATE, "utf-8");
       t = t.replace(/\{\{WORKER_URL\}\}/g, process.env.WORKER_URL || "");
       t = t.replace(/\{\{FORM_ID\}\}/g, process.env.FORM_ID || "");
+      t = t.replace(/\{\{CONNECT_SHEETS_DOCS_URL\}\}/g, process.env.CONNECT_SHEETS_DOCS_URL || "");
       const title = (process.env.FORM_TITLE || "form").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
       t = t.replace(/\{\{FORM_TITLE\}\}/g, title);
       t = t.replace(/\{\{SCHEMA_JSON\}\}/, schema);

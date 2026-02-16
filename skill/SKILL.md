@@ -577,6 +577,16 @@ This form sends responses to Google Sheets and Zapier simultaneously, with Excel
 
 ---
 
+## CLI Deploy (Quick Reference)
+
+**Share with others:** `pnpm formant deploy <form.html> --target vercel --with-backend` or `--target cloudflare` — shareable URL, server-side storage, dashboard.
+
+**Preview locally:** `pnpm formant deploy <form.html> --target offline` or `pnpm formant preview <schema.json>`.
+
+**Other options:** Vercel + Sheets (Connect Google Sheet), Local (kiosk), Vercel + admin. See `docs/deploy-options.md` for full reference.
+
+---
+
 ## Deploying to the Formant Service
 
 After generating a form, you can offer to deploy it to a live URL using the Formant hosting service.

@@ -34,6 +34,10 @@
     .analytics-card .label { font-size: 0.75rem; color: #666; margin-bottom: 0.25rem; }
     .analytics-card .value { font-size: 1.25rem; font-weight: 600; }
     .analytics-dropoff { font-size: 0.875rem; color: #555; margin-bottom: 0.5rem; }
+    .sheets-connect { margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ccc; background: #fafafa; }
+    .sheets-connect button { padding: 0.5rem 1rem; cursor: pointer; }
+    .sheets-connect .connected { color: #16a34a; }
+    .sheets-connect .sheets-link { margin-left: 0.5rem; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
@@ -44,6 +48,10 @@
   <div class="auth">
     <input type="password" id="apiKey" placeholder="Paste your API key" autocomplete="off">
     <button type="button" id="loadBtn">Load responses</button>
+  </div>
+
+  <div id="sheetsConnectSection" class="sheets-connect" style="display:none;">
+    <div id="sheetsConnectContent"></div>
   </div>
 
   <div id="analyticsSection" class="analytics" style="display:none;">
@@ -97,6 +105,7 @@
 (function() {
   const WORKER_URL = "{{WORKER_URL}}";
   const FORM_ID = "{{FORM_ID}}";
+  const CONNECT_SHEETS_DOCS_URL = "{{CONNECT_SHEETS_DOCS_URL}}";
   const schemaEl = document.getElementById("schema-json");
   const SCHEMA_JSON = schemaEl ? (function(){ try { return JSON.parse(schemaEl.textContent || "{}"); } catch(e){ return {}; } })() : {};
 
@@ -148,6 +157,99 @@
     const k = apiKeyEl.value.trim();
     if (k) try { sessionStorage.setItem("formant_api_key", k); } catch (_) {}
     return k || (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("formant_api_key") : null) || "";
+  }
+
+  const SHEETS_DB = "formant_sheets_config";
+  const SHEETS_STORE = "urls";
+  function openSheetsDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(SHEETS_DB, 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+      req.onupgradeneeded = (e) => { e.target.result.createObjectStore(SHEETS_STORE, { keyPath: "formId" }); };
+    });
+  }
+  async function getStoredSheetsUrl(formId) {
+    try {
+      const db = await openSheetsDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(SHEETS_STORE, "readonly");
+        const req = tx.objectStore(SHEETS_STORE).get(formId);
+        req.onsuccess = () => { db.close(); resolve(req.result || null); };
+        req.onerror = () => { db.close(); resolve(null); };
+      });
+    } catch { return null; }
+  }
+  async function setStoredSheetsUrl(formId, config) {
+    const db = await openSheetsDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(SHEETS_STORE, "readwrite");
+      tx.objectStore(SHEETS_STORE).put({ formId, url: config.url, spreadsheetUrl: config.spreadsheetUrl, connectedAt: config.connectedAt || new Date().toISOString() });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  }
+  async function handleSheetsCallback() {
+    const hash = (location.hash || "").replace(/^#/, "");
+    if (!hash) return;
+    const params = Object.fromEntries(new URLSearchParams(hash));
+    const url = params.url;
+    const spreadsheetUrl = params.spreadsheetUrl;
+    const formId = params.formId;
+    if (url && formId) {
+      await setStoredSheetsUrl(formId, { url, spreadsheetUrl });
+      history.replaceState(null, "", location.pathname);
+      renderSheetsSection();
+    }
+    const err = params.error;
+    if (err) showError("Connect failed: " + (params.message || err));
+  }
+  async function renderSheetsSection() {
+    const section = document.getElementById("sheetsConnectSection");
+    const content = document.getElementById("sheetsConnectContent");
+    if (!WORKER_URL || !WORKER_URL.trim()) { section.style.display = "none"; return; }
+    const isFile = location.protocol === "file:";
+    if (isFile) {
+      section.style.display = "block";
+      content.innerHTML = '<span class="error">Connect requires the dashboard to be served over HTTPS. Deploy the dashboard or run <code>npx serve forms</code> and open from localhost.</span>';
+      return;
+    }
+    let configured = false;
+    try {
+      const statusRes = await fetch(WORKER_URL.replace(/\/$/, "") + "/api/connect-sheets/status");
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        configured = !!statusData.configured;
+      }
+    } catch (_) { /* assume not configured on fetch error */ }
+    section.style.display = "block";
+    if (!configured) {
+      const docsLink = CONNECT_SHEETS_DOCS_URL
+        ? '<a href="' + CONNECT_SHEETS_DOCS_URL.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '" target="_blank" rel="noopener">Setup guide</a>'
+        : "";
+      content.innerHTML = '<strong>Connect to Google Sheet</strong><p>How to set up: Configure OAuth credentials in Google Cloud, then set secrets via your deployment platform. ' + docsLink + '</p>';
+      return;
+    }
+    const stored = await getStoredSheetsUrl(FORM_ID);
+    if (stored) {
+      content.innerHTML = '<span class="connected">Connected.</span><a class="sheets-link" href="' + (stored.spreadsheetUrl || "#") + '" target="_blank" rel="noopener">View in Google Sheet</a>';
+    } else {
+      content.innerHTML = '<button type="button" id="connectSheetsBtn">Connect Google Sheet</button>';
+      document.getElementById("connectSheetsBtn").addEventListener("click", async () => {
+        try {
+          const redirectUri = location.origin + location.pathname;
+          const res = await fetch(WORKER_URL.replace(/\/$/, "") + "/api/connect-sheets/init", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ redirect_uri: redirectUri, form_id: FORM_ID, schema: SCHEMA_JSON })
+          });
+          if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || res.statusText); }
+          const data = await res.json();
+          if (data.auth_url) location.href = data.auth_url;
+          else throw new Error("No auth URL");
+        } catch (e) { showError("Connect failed: " + (e.message || "Unknown")); }
+      });
+    }
   }
 
   function showError(msg) {
@@ -337,6 +439,7 @@
     }
   });
 
+  handleSheetsCallback().then(() => renderSheetsSection());
   if (getKey()) { loadBtn.click(); }
 })();
   </script>

@@ -23,22 +23,31 @@ The AI handles the rest — generates the schema, builds the HTML, and asks how 
 
 ## Deploy Options
 
-| Target | Best For | Command |
-|--------|----------|---------|
-| **Offline** | Testing, internal use, email the file | `pnpm formant deploy forms/my-form.html --target offline` |
-| **Vercel** | Shareable public URL | `pnpm formant deploy forms/my-form.html --target vercel` |
-| **Vercel + admin** | Form + admin, IndexedDB responses | `pnpm formant deploy forms/my-form.html --target vercel --with-admin` |
-| **Vercel + Sheets** | Connect Google Sheet (one-click OAuth) | `pnpm formant deploy forms/my-form.html --target vercel --with-sheets` |
-| **Vercel + Postgres** | Production: Vercel hosting + server-side storage | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
-| **Cloudflare** | Production: hosting + response collection | `pnpm formant deploy forms/my-form.html --target cloudflare` |
+### Share with others (production)
 
-Or run `pnpm formant deploy forms/my-form.html` for an interactive menu. (Use `pnpm formant deploy` — `pnpm deploy` is a built-in pnpm command.)
+| Option | Command |
+|--------|---------|
+| **Vercel + Postgres** | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
+| **Cloudflare** | `pnpm formant deploy forms/my-form.html --target cloudflare` |
 
-**Vercel + Postgres:** Requires `vercel postgres create` and migrations. See `plans/deploy-vercel-conventions.md`.
+Both give you a shareable URL, server-side storage, dashboard, and CSV/XLSX export. **Vercel + Postgres** requires `vercel postgres create` and migrations. See [plans/deploy-vercel-conventions.md](plans/deploy-vercel-conventions.md).
 
-**Vercel (non-interactive / CI):** Non-interactive deploys (e.g. from Cursor agent or CI) require `script` (Debian/Ubuntu: `apt install bsdutils`). For CI, set `VERCEL_ORG_ID` or `VERCEL_SCOPE` to skip scope detection.
+### Preview / test locally
 
-**Note:** Use `pnpm formant deploy` — `pnpm deploy` is pnpm's built-in workspace deploy command.
+| Option | Command |
+|--------|---------|
+| **Local preview** | `pnpm formant deploy forms/my-form.html --target offline` |
+| **Build + open** | `pnpm formant preview forms/my-form.json` |
+
+### Other options
+
+Vercel (plain), Vercel + Sheets, Local (kiosk), and Vercel + admin are still supported. See [docs/deploy-options.md](docs/deploy-options.md) for details.
+
+---
+
+Or run `pnpm formant deploy forms/my-form.html` for an interactive menu. Use `pnpm formant deploy` — `pnpm deploy` is pnpm's built-in workspace deploy command.
+
+**Vercel (non-interactive / CI):** Non-interactive deploys require `script` (Debian/Ubuntu: `apt install bsdutils`). For CI, set `VERCEL_ORG_ID` or `VERCEL_SCOPE` to skip scope detection.
 
 ## Connect Google Sheet (Local)
 

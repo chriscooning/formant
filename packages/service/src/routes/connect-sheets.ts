@@ -50,6 +50,13 @@ async function sha256Base64Url(input: string): Promise<string> {
 
 export const connectSheetsApp = new Hono<AppEnv>();
 
+// ─── GET /api/connect-sheets/status ───
+
+connectSheetsApp.get("/api/connect-sheets/status", (c) => {
+  const configured = !!(c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET);
+  return c.json({ configured });
+});
+
 // ─── POST /api/connect-sheets/init ───
 
 connectSheetsApp.post("/api/connect-sheets/init", async (c) => {

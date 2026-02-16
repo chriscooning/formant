@@ -10,8 +10,10 @@
 
 ### One-Command Deploy
 
-- **Vercel + Connect Google Sheet** — `pnpm formant deploy --target vercel --with-sheets` deploys Worker, form, and admin in one flow
-- **Vercel + admin** — `--with-admin` for form + admin panel, IndexedDB responses
+- **Vercel + Postgres** — Shareable URL, server-side storage, dashboard
+- **Cloudflare** — Same, with D1
+- **Vercel + Sheets** — Connect Google Sheet (one-click OAuth)
+- **Vercel + admin** — Form + admin panel, IndexedDB responses
 
 ### One-Click Google Sheets
 

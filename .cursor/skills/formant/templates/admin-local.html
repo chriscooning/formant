@@ -113,6 +113,7 @@
   const FORM_ID = "{{FORM_ID}}";
   const ADMIN_PASSWORD_HASH = "{{ADMIN_PASSWORD_HASH}}";
   const FORMANT_API_URL = "{{FORMANT_API_URL}}";
+  const CONNECT_SHEETS_DOCS_URL = "{{CONNECT_SHEETS_DOCS_URL}}";
 
   const schemaEl = document.getElementById("schema-json");
   const SCHEMA_JSON = schemaEl ? (function(){ try { return JSON.parse(schemaEl.textContent || "{}"); } catch(e){ return {}; } })() : {};
@@ -252,8 +253,23 @@
       content.innerHTML = '<span class="error">Connect Google Sheet requires serving over HTTP. Run <code>npx serve .</code> in this folder.</span>';
       return;
     }
-    const stored = await getStoredSheetsUrl(FORM_ID);
+    let configured = false;
+    try {
+      const statusRes = await fetch(FORMANT_API_URL.replace(/\/$/, "") + "/api/connect-sheets/status");
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        configured = !!statusData.configured;
+      }
+    } catch (_) { /* assume not configured on fetch error */ }
     section.style.display = "block";
+    if (!configured) {
+      const docsLink = CONNECT_SHEETS_DOCS_URL
+        ? '<a href="' + CONNECT_SHEETS_DOCS_URL.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '" target="_blank" rel="noopener">Setup guide</a>'
+        : "";
+      content.innerHTML = '<strong>Connect to Google Sheet</strong><p>How to set up: Configure OAuth credentials in Google Cloud, then set secrets via your deployment platform. ' + docsLink + '</p>';
+      return;
+    }
+    const stored = await getStoredSheetsUrl(FORM_ID);
     if (stored) {
       content.innerHTML = '<span class="connected">Connected.</span><a class="sheets-link" href="' + (stored.spreadsheetUrl || "#") + '" target="_blank" rel="noopener">View in Google Sheet</a>';
     } else {

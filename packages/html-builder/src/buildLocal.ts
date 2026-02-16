@@ -12,15 +12,20 @@ const TEMPLATE_PATH = path.resolve(
   "../../../.cursor/skills/formant/templates/admin-local.html",
 );
 
+const DEFAULT_CONNECT_SHEETS_DOCS_URL =
+  "https://github.com/chriscooning/formant/blob/main/docs/connect-google-sheet-local.md";
+
 /**
  * Build admin panel HTML for local mode.
  * Reads admin-local template and replaces placeholders.
  * @param formantApiUrl - Base URL of Formant API for Connect Google Sheet (e.g. https://api.formant.dev). Empty hides Connect UI.
+ * @param connectSheetsDocsUrl - URL to Connect Google Sheet setup docs. Defaults to repo docs path.
  */
 export function buildAdminHTML(
   schema: FormSchema,
   adminPasswordHash: string,
   formantApiUrl = "",
+  connectSheetsDocsUrl = DEFAULT_CONNECT_SHEETS_DOCS_URL,
 ): string {
   let template: string;
   try {
@@ -48,7 +53,8 @@ export function buildAdminHTML(
     .replace(/\{\{FORM_TITLE\}\}/g, formTitle)
     .replace(/\{\{SCHEMA_JSON\}\}/, schemaJSON)
     .replace(/\{\{ADMIN_PASSWORD_HASH\}\}/g, adminPasswordHash)
-    .replace(/\{\{FORMANT_API_URL\}\}/g, formantApiUrl);
+    .replace(/\{\{FORMANT_API_URL\}\}/g, formantApiUrl)
+    .replace(/\{\{CONNECT_SHEETS_DOCS_URL\}\}/g, connectSheetsDocsUrl);
 }
 
 /**

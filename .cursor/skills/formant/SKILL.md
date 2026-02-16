@@ -27,35 +27,35 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
    pnpm formant build forms/<name>.json -o forms/<name>.html
    ```
    This produces both `forms/<name>.html` and `forms/<name>.json` (schema copy).
-5. **Ask** the user: "How would you like to host this form?" — offline, Vercel, or Cloudflare.
-   - **Offline** — open in browser or email the HTML file
-   - **Vercel** — shareable public URL, no server needed
-   - **Cloudflare** — hosting + built-in D1 response collection (recommended if they chose Cloudflare for responses)
-   - Hosting is separate from response collection: Excel and Sheets work on all targets. If they chose Cloudflare D1 for responses, recommend Cloudflare deploy.
+5. **Ask** the user: "How would you like to host this form?"
+   - **Share with others** — Vercel + Postgres or Cloudflare (recommended for production)
+   - **Preview / test** — Offline or preview
+   - **Special needs** — Vercel + Sheets (Google Sheets), Local (kiosk), Vercel + admin (IndexedDB)
+   - Hosting is separate from response collection: Excel and Sheets work on all targets.
 
 ## Deploy Options
 
+### Recommended
+
+**Share with others:** `pnpm formant deploy <form.html> --target vercel --with-backend` or `--target cloudflare` — shareable URL, server-side storage, dashboard.
+
+**Preview / test locally:** `pnpm formant deploy <form.html> --target offline` or `pnpm formant preview <schema.json>`.
+
+### Full reference
+
 | Target | Best For | Response Collection | Command |
 |--------|----------|---------------------|---------|
-| **Offline** | Testing, internal use, email the HTML file | Excel download on submit | `pnpm formant deploy <form.html> --target offline` |
+| **Offline** | Testing, internal use, email the file | Excel download on submit | `pnpm formant deploy <form.html> --target offline` |
 | **Local** | Kiosk mode, iPad, no network | IndexedDB (form + admin panel) | `pnpm formant build forms/<name>.json --local` |
-| **Vercel** | Shareable public URL, no server-side storage needed | Excel download (or add Google Sheets) | `pnpm formant deploy <form.html> --target vercel` |
-| **Vercel + admin** | Form + admin, view responses in browser | IndexedDB (form + admin) | `pnpm formant deploy <form.html> --target vercel --with-admin` |
+| **Vercel** | Shareable public URL, no server-side storage | Excel download (or add Google Sheets) | `pnpm formant deploy <form.html> --target vercel` |
+| **Vercel + admin** | Form + admin, IndexedDB responses | IndexedDB (form + admin) | `pnpm formant deploy <form.html> --target vercel --with-admin` |
 | **Vercel + Sheets** | Connect Google Sheet (one-click OAuth) | Worker + form + admin | `pnpm formant deploy <form.html> --target vercel --with-sheets` |
-| **Vercel + Postgres** | Production: Vercel hosting + server-side storage | Postgres + API key + XLSX/CSV export | Deploy `service-vercel`; `POSTGRES_URL` required |
-| **Cloudflare** | Production: hosting + response DB in one place | Built-in D1 database + API + XLSX/CSV export | `pnpm formant deploy <form.html> --target cloudflare` |
+| **Vercel + Postgres** | Production: Vercel + server-side storage | Postgres + dashboard | `pnpm formant deploy <form.html> --target vercel --with-backend` |
+| **Cloudflare** | Production: hosting + response DB | D1 + dashboard | `pnpm formant deploy <form.html> --target cloudflare` |
 
-- **Offline**: Opens the form in the default browser. Responses download as Excel on submit. No hosting needed.
-- **Local**: Build with `--local` produces `forms/<name>.html` (form) and `forms/<name>-admin.html` (admin panel). Requires `FORMANT_ADMIN_PASSWORD` in env or `--admin-password <p>`. Form stores responses in IndexedDB; admin reads from IndexedDB, password gate, analytics (submissions chart, completion rate, avg time, highest dropoff; no views), CSV/XLSX export. Copy both files to the device (same folder for IndexedDB origin). Open form for kiosk, admin for export.
-- **Vercel**: Deploys as a static site with a public URL. Optionally set up Google Sheets for response collection (the script walks through it).
-- **Vercel + admin** (`--with-admin`): Builds form + admin with `--local`, deploys both to Vercel. Form at `/`, admin at `/admin.html`. Responses in IndexedDB. Requires `FORMANT_ADMIN_PASSWORD` or `--admin-password <p>`.
-- **Vercel + Sheets** (`--with-sheets`): Deploys Worker first (Connect Google Sheet API), builds form + admin with `FORMANT_API_URL`, deploys both to Vercel. **Post-deploy:** Add your Vercel URL to Google Cloud OAuth → Authorized JavaScript origins. See `docs/connect-google-sheet-local.md` (Production section).
-- **Vercel + Postgres**: Deploy `packages/service-vercel` to Vercel (Edge + Postgres). Same API as Cloudflare: POST /api/forms, GET /f/:id, POST /api/responses, GET /api/responses/:formId (list), /xlsx, /csv, /analytics, DELETE /api/forms. Requires `POSTGRES_URL` (Vercel Postgres). Run `schema.sql` to create tables. Use `{ "type": "service", "formId": "...", "endpoint": "https://your-api.vercel.app" }` in submit destinations.
-- **Cloudflare**: Deploys a Cloudflare Worker with D1 database. Forms are uploaded via API, responses are collected server-side, and XLSX/CSV export endpoints are available. A local dashboard is created at `forms/<name>-dashboard.html` — open it, paste your API key, and view responses, analytics (chart of views + submissions, 7/14/30 day range, completion rate, avg time, highest dropoff), and export (CSV or XLSX). First-time setup creates the database and runs migrations automatically.
+**Deploy decision tree:** Share with others → Vercel + Postgres or Cloudflare. Test locally → Offline or preview. Google Sheets → `--with-sheets`. Kiosk/offline → `--local`. Form + admin (IndexedDB) → `--with-admin`.
 
-**Deploy decision tree:** If user wants Vercel + view responses in admin → use `--with-admin`. If user wants Vercel + Connect Google Sheet → use `--with-sheets`. If user wants Vercel + server-side storage (like Cloudflare) → deploy `service-vercel` with Postgres.
-
-**Use `pnpm formant deploy`** (not `pnpm deploy` — that's pnpm's built-in). Run without `--target` for an interactive menu.
+**Use `pnpm formant deploy`** (not `pnpm deploy` — that's pnpm's built-in). Run without `--target` for an interactive menu. See `docs/deploy-options.md` for full details.
 
 ## Field Type Cheat Sheet
 

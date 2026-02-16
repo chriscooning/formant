@@ -27,11 +27,12 @@ Track which phases are complete. Each agent session should read this first and u
 | 8A | Shared API layer + DB abstraction | **complete** |
 | 8B | Vercel adapter + Postgres | **complete** |
 | 8C | Deploy script + form integration | **complete** |
-| 8D | Testing parity + documentation | **pending** |
+| 8D | Testing parity + documentation | **complete** |
 | 9 | Connect Google Sheet OAuth | **complete** |
 | 10 | Seamless AI Deploy | **complete** |
+| 11 | Connect Sheets Admin UI | **complete** |
 
-**Next up:** 8D (testing parity + documentation).
+**Next up:** Phase 5 (deploy dashboard) optional — see `plans/connect-sheets-admin-ui.md`.
 
 ## Execution Order
 
