@@ -51,6 +51,7 @@ Ideas to make Formant a skill most developers and IT admins would want in their 
 
 ## Other ideas
 
+- [ ] **Cloudflare isolated DB mode** — `--target cloudflare --isolated` spins up a new D1 + Worker per form. Full isolation, clean deletion. See `plans/cloudflare-isolated-db-mode.md`. D1 free tier: 5 DBs.
 - [ ] **Share feedback with Formant** — Dedicated feedback form (README or docs) for users to share experience, feature requests, bugs. Transparent, opt-in.
 - [ ] Web playground — paste a schema, see the form live (no install needed)
 - [ ] `formant publish` — one command to push updates to an already-deployed form

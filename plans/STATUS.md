@@ -31,8 +31,11 @@ Track which phases are complete. Each agent session should read this first and u
 | 9 | Connect Google Sheet OAuth | **complete** |
 | 10 | Seamless AI Deploy | **complete** |
 | 11 | Connect Sheets Admin UI | **complete** |
+| 12 | Seamless Deploy Experience | **complete** |
 
 **Next up:** Phase 5 (deploy dashboard) optional — see `plans/connect-sheets-admin-ui.md`.
+
+**Future:** Cloudflare isolated DB mode — `plans/cloudflare-isolated-db-mode.md`.
 
 ## Execution Order
 
