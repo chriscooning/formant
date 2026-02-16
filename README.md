@@ -1,10 +1,8 @@
 # Formant
 
-Generate beautiful, self-contained HTML forms from natural language.
+Generate beautiful, self-contained HTML forms from natural language. Clone the repo, open it in Cursor, and describe what you want. The AI generates the schema, builds a single HTML file, and helps you deploy.
 
-**[Product & features →](docs/PRODUCT.md)**
-
-Describe what you want to collect, and Formant builds a single HTML file with keyboard navigation, dark/light mode, smooth transitions, and multiple response destinations.
+Forms are **self-contained single HTML files** — work anywhere (email, local, hosted). No backend required; Excel download and webhooks work out of the box. Add Cloudflare or Vercel when you need server-side storage. One question at a time, dark/light mode, keyboard navigation.
 
 ## Quick Start
 
@@ -27,35 +25,17 @@ Then in the Cursor chat, just say what you need:
 
 The AI handles the rest — generates the schema, builds the HTML, and asks how you want to deploy.
 
-## Deploy Options
+## Deploy
 
-### Share with others (production)
-
-| Option | Command |
-|--------|---------|
-| **Cloudflare** | `pnpm formant deploy forms/my-form.html --target cloudflare` |
+| Goal | Command |
+|------|---------|
+| **Share with others** (recommended) | `pnpm formant deploy forms/my-form.html --target cloudflare` |
+| **Preview locally** | `pnpm formant deploy forms/my-form.html --target offline` |
 | **Vercel + Postgres** | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
 
-**Deploy with one command:** `pnpm formant deploy form.html --target cloudflare` — includes database, no setup.
+Cloudflare includes database and dashboard with one command. Vercel + Postgres needs a one-time DB setup — see [setup-vercel-postgres.md](docs/setup-vercel-postgres.md). All options: [deploy-options.md](docs/deploy-options.md).
 
-Both give you a shareable URL, server-side storage, dashboard, and CSV/XLSX export. Cloudflare requires no setup beyond `wrangler login`. For Vercel + Postgres, add a database in the Vercel UI first — see [docs/setup-vercel-postgres.md](docs/setup-vercel-postgres.md).
-
-### Preview / test locally
-
-| Option | Command |
-|--------|---------|
-| **Local preview** | `pnpm formant deploy forms/my-form.html --target offline` |
-| **Build + open** | `pnpm formant preview forms/my-form.json` |
-
-### Other options
-
-Vercel (plain), Vercel + Sheets, and Local (kiosk) are still supported. See [docs/deploy-options.md](docs/deploy-options.md) for details.
-
----
-
-Or run `pnpm formant deploy forms/my-form.html` for an interactive menu. Use `pnpm formant deploy` — `pnpm deploy` is pnpm's built-in workspace deploy command.
-
-**Vercel (non-interactive / CI):** Non-interactive deploys require `script` (Debian/Ubuntu: `apt install bsdutils`). For CI, set `VERCEL_ORG_ID` or `VERCEL_SCOPE` to skip scope detection.
+Or run `pnpm formant deploy forms/my-form.html` for an interactive menu. Use `pnpm formant deploy` — `pnpm deploy` is pnpm's built-in command.
 
 ## Connect Google Sheet (Local)
 
@@ -66,6 +46,16 @@ Forms can send responses to Google Sheets via a one-click OAuth flow. To test lo
 3. Run the API, build with `--local`, and serve the forms folder
 
 **Full guide:** [docs/connect-google-sheet-local.md](docs/connect-google-sheet-local.md)
+
+## Docs
+
+| Topic | File |
+|-------|------|
+| Deploy options (all targets) | [docs/deploy-options.md](docs/deploy-options.md) |
+| Vercel + Postgres setup | [docs/setup-vercel-postgres.md](docs/setup-vercel-postgres.md) |
+| Cloudflare D1 (when deploy fails) | [docs/setup-cloudflare-d1.md](docs/setup-cloudflare-d1.md) |
+| Connect Google Sheet | [docs/connect-google-sheet-local.md](docs/connect-google-sheet-local.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Manual CLI Usage
 
