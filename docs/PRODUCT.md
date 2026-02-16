@@ -13,7 +13,6 @@
 - **Vercel + Postgres** — Shareable URL, server-side storage, dashboard
 - **Cloudflare** — Same, with D1
 - **Vercel + Sheets** — Connect Google Sheet (one-click OAuth)
-- **Vercel + admin** — Form + admin panel, IndexedDB responses
 
 ### One-Click Google Sheets
 

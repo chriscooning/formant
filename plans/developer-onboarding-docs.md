@@ -72,7 +72,6 @@ packages/
 ### Current
 
 Vercel options in help output:
-- `--with-admin`
 - `--with-sheets`
 - `--admin-password`
 
@@ -82,10 +81,9 @@ Add `--with-backend`:
 
 ```
   Vercel options:
-    --with-admin       Include admin panel (form + admin, IndexedDB responses)
     --with-sheets      Deploy Worker first, then form + admin with Connect Google Sheet
     --with-backend     Deploy Vercel API + Postgres, upload form, generate dashboard
-    --admin-password   Admin password for --with-admin (or FORMANT_ADMIN_PASSWORD env)
+    --admin-password   Admin password for --with-sheets (or FORMANT_ADMIN_PASSWORD env)
 ```
 
 **File:** `scripts/deploy.sh`

@@ -4,29 +4,23 @@ set -euo pipefail
 # ─── Formant Deploy — Vercel (static hosting) ───
 #
 # Options:
-#   --with-admin       Include admin panel (form + admin, IndexedDB responses)
 #   --with-sheets      Deploy Worker first, form + admin with Connect Google Sheet
 #   --with-backend     Deploy Vercel API (service-vercel) + Postgres, upload form, generate dashboard
-#   --admin-password   Admin password for --with-admin (or FORMANT_ADMIN_PASSWORD env)
+#   --admin-password   Admin password for --with-sheets (or FORMANT_ADMIN_PASSWORD env)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SERVICE_VERCEL_DIR="$ROOT_DIR/packages/service-vercel"
 
-HTML_FILE="${1:?Usage: deploy-vercel.sh <form.html> [--with-admin] [--with-sheets] [--with-backend] [--admin-password <p>]}"
+HTML_FILE="${1:?Usage: deploy-vercel.sh <form.html> [--with-sheets] [--with-backend] [--admin-password <p>]}"
 shift
 
-WITH_ADMIN=false
 WITH_SHEETS=false
 WITH_BACKEND=false
 ADMIN_PASSWORD=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --with-admin)
-      WITH_ADMIN=true
-      shift
-      ;;
     --with-sheets)
       WITH_SHEETS=true
       shift
@@ -265,10 +259,10 @@ if [[ "$WITH_SHEETS" == true ]]; then
   echo ""
 fi
 
-# ─── Ensure form + admin when --with-admin or --with-sheets ───
+# ─── Ensure form + admin when --with-sheets ───
 
 ADMIN_HTML=""
-if [[ "$WITH_ADMIN" == true || "$WITH_SHEETS" == true ]]; then
+if [[ "$WITH_SHEETS" == true ]]; then
   SCHEMA_JSON="${HTML_FILE%.html}.json"
   ADMIN_HTML="${HTML_FILE%.html}-admin.html"
 
@@ -375,15 +369,10 @@ if [[ -n "$ADMIN_HTML" && -n "$VERCEL_URL" ]]; then
   echo "  Form:  $VERCEL_URL/"
   echo "  Admin: $VERCEL_URL/admin.html"
   echo ""
-  if [[ "$WITH_SHEETS" == true ]]; then
-    echo "  Next: Open admin, unlock, and click Connect Google Sheet."
-    echo "  Add your Vercel URL to Google Cloud OAuth: Authorized JavaScript origins"
-    echo "  See: docs/connect-google-sheet-local.md (Production section)"
-    echo ""
-  else
-    echo "  Responses stored in IndexedDB. Open admin to view, export CSV/XLSX."
-    echo ""
-  fi
+  echo "  Next: Open admin, unlock, and click Connect Google Sheet."
+  echo "  Add your Vercel URL to Google Cloud OAuth: Authorized JavaScript origins"
+  echo "  See: docs/connect-google-sheet-local.md (Production section)"
+  echo ""
 fi
 
 # ─── Optional Google Sheets setup (interactive only, form-only deploy) ───

@@ -49,7 +49,7 @@ Both give you a shareable URL, server-side storage, dashboard, and CSV/XLSX expo
 
 ### Other options
 
-Vercel (plain), Vercel + Sheets, Local (kiosk), and Vercel + admin are still supported. See [docs/deploy-options.md](docs/deploy-options.md) for details.
+Vercel (plain), Vercel + Sheets, and Local (kiosk) are still supported. See [docs/deploy-options.md](docs/deploy-options.md) for details.
 
 ---
 

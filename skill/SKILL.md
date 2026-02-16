@@ -583,7 +583,7 @@ This form sends responses to Google Sheets and Zapier simultaneously, with Excel
 
 **Preview locally:** `pnpm formant deploy <form.html> --target offline` or `pnpm formant preview <schema.json>`.
 
-**Other options:** Vercel + Sheets (Connect Google Sheet), Local (kiosk), Vercel + admin. See `docs/deploy-options.md` for full reference.
+**Other options:** Vercel + Sheets (Connect Google Sheet), Local (kiosk). See `docs/deploy-options.md` for full reference.
 
 ---
 

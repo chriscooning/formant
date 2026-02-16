@@ -14,7 +14,6 @@ Need to share with others?
 Special needs?
 ├── Google Sheets (one-click OAuth) → Vercel + Sheets
 ├── Kiosk / offline device → Local (--local)
-├── Form + admin, IndexedDB → Vercel + admin
 └── Shareable URL, Excel only → Vercel (plain)
 ```
 
@@ -50,21 +49,6 @@ FORMANT_ADMIN_PASSWORD=your-secret pnpm formant deploy forms/my-form.html --targ
 
 ---
 
-## Vercel + admin
-
-**Best for:** Form + admin panel on Vercel, responses in IndexedDB. Single-device shared kiosk with a URL.
-
-```bash
-FORMANT_ADMIN_PASSWORD=your-secret pnpm formant deploy forms/my-form.html --target vercel --with-admin
-```
-
-- Builds form + admin with `--local`, deploys both to Vercel
-- Form at `/`, admin at `/admin.html`
-- Responses stored in IndexedDB (per-origin, per-browser)
-- **Note:** IndexedDB is shared only when form and admin are on the same origin. For multi-user scenarios, use Vercel + Postgres or Cloudflare instead.
-
----
-
 ## Local (kiosk)
 
 **Best for:** Offline device (iPad, kiosk), no network. Form + admin, responses in IndexedDB.
@@ -86,7 +70,6 @@ FORMANT_ADMIN_PASSWORD=your-secret pnpm formant build forms/my-form.json --local
 |--------|---------|---------------------|
 | **Offline** | `--target offline` | Excel download |
 | **Vercel** | `--target vercel` | Excel download |
-| **Vercel + admin** | `--target vercel --with-admin` | IndexedDB |
 | **Vercel + Sheets** | `--target vercel --with-sheets` | Google Sheet (OAuth) |
 | **Vercel + Postgres** | `--target vercel --with-backend` | Postgres + dashboard |
 | **Cloudflare** | `--target cloudflare` | D1 + dashboard |
