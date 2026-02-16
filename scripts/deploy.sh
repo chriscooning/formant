@@ -34,6 +34,11 @@ while [[ $# -gt 0 ]]; do
       echo "    vercel       Deploy to Vercel static hosting (optional Google Sheets integration)"
       echo "    cloudflare   Deploy to Cloudflare Workers with built-in response collection"
       echo ""
+      echo "  Vercel options:"
+      echo "    --with-admin       Include admin panel (form + admin, IndexedDB responses)"
+      echo "    --with-sheets      Deploy Worker first, then form + admin with Connect Google Sheet"
+      echo "    --admin-password   Admin password for --with-admin (or FORMANT_ADMIN_PASSWORD env)"
+      echo ""
       echo "  If --target is omitted, an interactive menu is shown."
       echo ""
       exit 0

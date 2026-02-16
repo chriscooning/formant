@@ -11,12 +11,15 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 
 1. **Ask** what the user wants to collect **before** generating the schema:
    - **Questions and branching logic** — what to ask, in what order, any conditional flows
-   - **Response collection** — where should responses go?
-     - **Excel download** (default, client-side) — works everywhere, no setup
-     - **Google Sheets** — requires `scripts/setup-sheets.sh`
-     - **Webhook** — POST to a URL (Zapier, Slack, custom API)
-     - **Cloudflare D1** — requires Cloudflare deploy for server-side storage
-     - Always include Excel as a fallback unless the user explicitly opts out.
+- **Response collection** — where should responses go?
+    - **Excel download** (default, client-side) — works everywhere, no setup
+    - **Connect Google Sheet** (one-click OAuth) — requires Worker + admin; use `--with-sheets` for Vercel
+    - **Google Sheets** (Apps Script) — requires `scripts/setup-sheets.sh`
+    - **Webhook** — POST to a URL (Zapier, Slack, custom API)
+    - **Cloudflare D1** — requires Cloudflare deploy for server-side storage
+    - **Vercel Postgres** — requires Vercel deploy with `service-vercel`; server-side storage + API key
+    - **Local (IndexedDB)** — form + admin; use `--with-admin` for Vercel
+    - Always include Excel as a fallback unless the user explicitly opts out.
 2. **Generate** a valid FormSchema JSON
 3. **Save** to `forms/<name>.json`
 4. **Build** by running:
@@ -34,17 +37,25 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 
 | Target | Best For | Response Collection | Command |
 |--------|----------|---------------------|---------|
-| **Offline** | Testing, internal use, email the HTML file | Excel download on submit | `pnpm deploy <form.html> --target offline` |
+| **Offline** | Testing, internal use, email the HTML file | Excel download on submit | `pnpm formant deploy <form.html> --target offline` |
 | **Local** | Kiosk mode, iPad, no network | IndexedDB (form + admin panel) | `pnpm formant build forms/<name>.json --local` |
-| **Vercel** | Shareable public URL, no server-side storage needed | Excel download (or add Google Sheets) | `pnpm deploy <form.html> --target vercel` |
-| **Cloudflare** | Production: hosting + response DB in one place | Built-in D1 database + API + XLSX/CSV export | `pnpm deploy <form.html> --target cloudflare` |
+| **Vercel** | Shareable public URL, no server-side storage needed | Excel download (or add Google Sheets) | `pnpm formant deploy <form.html> --target vercel` |
+| **Vercel + admin** | Form + admin, view responses in browser | IndexedDB (form + admin) | `pnpm formant deploy <form.html> --target vercel --with-admin` |
+| **Vercel + Sheets** | Connect Google Sheet (one-click OAuth) | Worker + form + admin | `pnpm formant deploy <form.html> --target vercel --with-sheets` |
+| **Vercel + Postgres** | Production: Vercel hosting + server-side storage | Postgres + API key + XLSX/CSV export | Deploy `service-vercel`; `POSTGRES_URL` required |
+| **Cloudflare** | Production: hosting + response DB in one place | Built-in D1 database + API + XLSX/CSV export | `pnpm formant deploy <form.html> --target cloudflare` |
 
 - **Offline**: Opens the form in the default browser. Responses download as Excel on submit. No hosting needed.
 - **Local**: Build with `--local` produces `forms/<name>.html` (form) and `forms/<name>-admin.html` (admin panel). Requires `FORMANT_ADMIN_PASSWORD` in env or `--admin-password <p>`. Form stores responses in IndexedDB; admin reads from IndexedDB, password gate, analytics (submissions chart, completion rate, avg time, highest dropoff; no views), CSV/XLSX export. Copy both files to the device (same folder for IndexedDB origin). Open form for kiosk, admin for export.
 - **Vercel**: Deploys as a static site with a public URL. Optionally set up Google Sheets for response collection (the script walks through it).
+- **Vercel + admin** (`--with-admin`): Builds form + admin with `--local`, deploys both to Vercel. Form at `/`, admin at `/admin.html`. Responses in IndexedDB. Requires `FORMANT_ADMIN_PASSWORD` or `--admin-password <p>`.
+- **Vercel + Sheets** (`--with-sheets`): Deploys Worker first (Connect Google Sheet API), builds form + admin with `FORMANT_API_URL`, deploys both to Vercel. **Post-deploy:** Add your Vercel URL to Google Cloud OAuth → Authorized JavaScript origins. See `docs/connect-google-sheet-local.md` (Production section).
+- **Vercel + Postgres**: Deploy `packages/service-vercel` to Vercel (Edge + Postgres). Same API as Cloudflare: POST /api/forms, GET /f/:id, POST /api/responses, GET /api/responses/:formId (list), /xlsx, /csv, /analytics, DELETE /api/forms. Requires `POSTGRES_URL` (Vercel Postgres). Run `schema.sql` to create tables. Use `{ "type": "service", "formId": "...", "endpoint": "https://your-api.vercel.app" }` in submit destinations.
 - **Cloudflare**: Deploys a Cloudflare Worker with D1 database. Forms are uploaded via API, responses are collected server-side, and XLSX/CSV export endpoints are available. A local dashboard is created at `forms/<name>-dashboard.html` — open it, paste your API key, and view responses, analytics (chart of views + submissions, 7/14/30 day range, completion rate, avg time, highest dropoff), and export (CSV or XLSX). First-time setup creates the database and runs migrations automatically.
 
-Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
+**Deploy decision tree:** If user wants Vercel + view responses in admin → use `--with-admin`. If user wants Vercel + Connect Google Sheet → use `--with-sheets`. If user wants Vercel + server-side storage (like Cloudflare) → deploy `service-vercel` with Postgres.
+
+**Use `pnpm formant deploy`** (not `pnpm deploy` — that's pnpm's built-in). Run without `--target` for an interactive menu.
 
 ## Field Type Cheat Sheet
 
@@ -91,9 +102,11 @@ Run `pnpm deploy <form.html>` without `--target` for an interactive menu.
 |--------|----------------|-------|
 | Excel download | `{ "type": "excel" }` | Client-side XLSX. Works on all hosting targets. |
 | Local (IndexedDB) | `{ "type": "local" }` | Kiosk mode. Use `pnpm formant build --local` for form + admin. |
-| Google Sheets | `{ "type": "sheets", "url": "..." }` | Requires `scripts/setup-sheets.sh` |
+| Connect Google Sheet | `{ "type": "local" }` + Worker + admin | One-click OAuth. Use `pnpm formant deploy --target vercel --with-sheets`. |
+| Google Sheets (Apps Script) | `{ "type": "sheets", "url": "..." }` | Requires `scripts/setup-sheets.sh` |
 | Webhook | `{ "type": "webhook", "url": "..." }` | POST JSON to any URL |
-| Cloudflare D1 | `{ "type": "service", ... }` | Requires Cloudflare deploy |
+| Cloudflare D1 | `{ "type": "service", "formId": "...", "endpoint": "..." }` | Requires Cloudflare deploy |
+| Vercel Postgres | `{ "type": "service", "formId": "...", "endpoint": "https://your-api.vercel.app" }` | Deploy `service-vercel`; `POSTGRES_URL` required |
 
 **Rule:** Always include Excel in `submit.destinations` unless the user explicitly opts out. Multiple destinations fire in parallel.
 
@@ -111,7 +124,7 @@ Multiple destinations fire in parallel. Always include `excel` as a fallback (ex
 | `local` | -- | IndexedDB storage. Use with `--local` build for form + admin. |
 | `sheets` | `url` | Google Apps Script web app URL |
 | `webhook` | `url` | POST JSON. Optional `headers`. Retries once on 5xx. |
-| `service` | `formId` | Formant hosting service. Optional `endpoint`. |
+| `service` | `formId` | Formant hosting service. Optional `endpoint` (Cloudflare Workers or Vercel Postgres API URL). |
 
 ## Branching
 
@@ -152,12 +165,14 @@ pnpm formant build forms/<name>.json --local  # form + admin, requires FORMANT_A
 pnpm formant preview <schema.json>   # build + open in browser
 
 # Deploy (interactive menu)
-pnpm deploy <form.html>
+pnpm formant deploy <form.html>
 
 # Deploy (skip menu)
-pnpm deploy <form.html> --target offline      # open in browser
-pnpm deploy <form.html> --target vercel       # deploy to Vercel
-pnpm deploy <form.html> --target cloudflare   # deploy to Cloudflare Workers
+pnpm formant deploy <form.html> --target offline      # open in browser
+pnpm formant deploy <form.html> --target vercel       # deploy to Vercel
+pnpm formant deploy <form.html> --target vercel --with-admin   # form + admin, IndexedDB
+pnpm formant deploy <form.html> --target vercel --with-sheets  # Worker + form + admin, Connect Google Sheet
+pnpm formant deploy <form.html> --target cloudflare   # deploy to Cloudflare Workers
 
 # Local/kiosk: build produces form.html + form-admin.html
 export FORMANT_ADMIN_PASSWORD=your-secret

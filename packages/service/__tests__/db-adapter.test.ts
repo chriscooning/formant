@@ -52,6 +52,8 @@ function createMockAdapter(overrides?: Partial<DbAdapter>): DbAdapter {
       series: [{ date: "2024-01-01", views: 1, submissions: 1 }],
       highestDropoff: null,
     }),
+    insertOAuthSession: async () => {},
+    getAndDeleteOAuthSession: async () => null,
     ...overrides,
   };
 }

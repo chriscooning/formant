@@ -13,3 +13,6 @@ forms/*.html
 
 # Local secrets (never commit)
 packages/service/.dev.vars
+
+# Deploy temp files (left behind on interrupt)
+.deploy-cf-out-*

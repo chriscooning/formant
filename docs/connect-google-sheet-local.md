@@ -202,14 +202,26 @@ cd forms && npx serve . -p 5500
 
 ---
 
-## Production deployment
+## Production (Vercel + Connect Google Sheet)
 
-For production, you'll need to:
+Deploy form + admin to Vercel with Connect Google Sheet in one command:
 
-1. Add your production URLs to the OAuth client in Google Cloud:
-   - **Authorized JavaScript origins:** Your admin URL (e.g. `https://your-app.vercel.app`)
-   - **Authorized redirect URIs:** Your API callback (e.g. `https://your-worker.workers.dev/api/connect-sheets/callback`)
+```bash
+FORMANT_ADMIN_PASSWORD=your-secret pnpm formant deploy forms/<name>.html --target vercel --with-sheets
+```
 
-2. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as secrets in your deployment (e.g. `wrangler secret put` for Cloudflare Workers)
+This deploys the Cloudflare Worker (API) first, then builds form + admin with `FORMANT_API_URL`, then deploys both to Vercel.
 
-3. Build with `FORMANT_API_URL` pointing to your production API URL
+**After deploy:**
+
+1. Add your production URLs to the OAuth client in [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials → your OAuth client:
+   - **Authorized JavaScript origins:** Your admin URL (e.g. `https://formant-form-xxx.vercel.app`)
+   - **Authorized redirect URIs:** `https://<your-worker>.workers.dev/api/connect-sheets/callback`
+
+2. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as secrets in Cloudflare:
+   ```bash
+   cd packages/service && pnpm exec wrangler secret put GOOGLE_CLIENT_ID
+   pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET
+   ```
+
+3. Open your admin URL, unlock, and click **Connect Google Sheet**.

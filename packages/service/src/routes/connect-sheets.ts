@@ -81,12 +81,13 @@ connectSheetsApp.post("/api/connect-sheets/init", async (c) => {
   const origin = new URL(c.req.url).origin;
   const callbackUrl = `${origin}/api/connect-sheets/callback`;
 
-  await c.env.DB.prepare(
-    `INSERT INTO oauth_sessions (state, form_id, schema_json, redirect_uri, code_verifier)
-     VALUES (?, ?, ?, ?, ?)`,
-  )
-    .bind(state, formId, JSON.stringify(schema), redirectUri, codeVerifier)
-    .run();
+  await c.env.db.insertOAuthSession({
+    state,
+    formId,
+    schemaJson: JSON.stringify(schema),
+    redirectUri,
+    codeVerifier,
+  });
 
   const authUrl =
     `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -119,23 +120,16 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
     return c.json({ error: "Missing code or state" }, 400);
   }
 
-  const row = await c.env.DB.prepare(
-    "SELECT form_id, schema_json, redirect_uri, code_verifier FROM oauth_sessions WHERE state = ?",
-  )
-    .bind(state)
-    .first<{ form_id: string; schema_json: string; redirect_uri: string; code_verifier: string }>();
+  const row = await c.env.db.getAndDeleteOAuthSession(state);
 
   if (!row) {
     return c.json({ error: "Invalid or expired state" }, 400);
   }
 
-  // Delete session (one-time use)
-  await c.env.DB.prepare("DELETE FROM oauth_sessions WHERE state = ?").bind(state).run();
-
   const clientId = c.env.GOOGLE_CLIENT_ID;
   const clientSecret = c.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    return c.redirect(`${row.redirect_uri}#error=server_config`, 302);
+    return c.redirect(`${row.redirectUri}#error=server_config`, 302);
   }
 
   const origin = new URL(c.req.url).origin;
@@ -149,7 +143,7 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
       client_id: clientId,
       client_secret: clientSecret,
       code,
-      code_verifier: row.code_verifier,
+      code_verifier: row.codeVerifier,
       grant_type: "authorization_code",
       redirect_uri: callbackUrl,
     }),
@@ -157,7 +151,7 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
 
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
-    return c.redirect(`${row.redirect_uri}#error=token_exchange&message=${encodeURIComponent(errText)}`, 302);
+    return c.redirect(`${row.redirectUri}#error=token_exchange&message=${encodeURIComponent(errText)}`, 302);
   }
 
   const tokenData = (await tokenRes.json()) as { access_token: string };
@@ -165,9 +159,9 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
 
   let schema: { fields?: Array<{ id: string; type?: string; title?: string }> };
   try {
-    schema = JSON.parse(row.schema_json) as typeof schema;
+    schema = JSON.parse(row.schemaJson) as typeof schema;
   } catch {
-    return c.redirect(`${row.redirect_uri}#error=invalid_schema`, 302);
+    return c.redirect(`${row.redirectUri}#error=invalid_schema`, 302);
   }
 
   // 1. Create spreadsheet
@@ -184,7 +178,7 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
 
   if (!createRes.ok) {
     const errText = await createRes.text();
-    return c.redirect(`${row.redirect_uri}#error=create_sheet&message=${encodeURIComponent(errText)}`, 302);
+    return c.redirect(`${row.redirectUri}#error=create_sheet&message=${encodeURIComponent(errText)}`, 302);
   }
 
   const createData = (await createRes.json()) as { spreadsheetId: string; spreadsheetUrl?: string };
@@ -222,7 +216,7 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
 
   if (!scriptRes.ok) {
     const errText = await scriptRes.text();
-    return c.redirect(`${row.redirect_uri}#error=create_script&message=${encodeURIComponent(errText)}`, 302);
+    return c.redirect(`${row.redirectUri}#error=create_script&message=${encodeURIComponent(errText)}`, 302);
   }
 
   const scriptData = (await scriptRes.json()) as { scriptId: string };
@@ -256,7 +250,7 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
 
   if (!contentRes.ok) {
     const errText = await contentRes.text();
-    return c.redirect(`${row.redirect_uri}#error=script_content&message=${encodeURIComponent(errText)}`, 302);
+    return c.redirect(`${row.redirectUri}#error=script_content&message=${encodeURIComponent(errText)}`, 302);
   }
 
   // 5. Create version from content
@@ -271,7 +265,7 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
 
   if (!versionRes.ok) {
     const errText = await versionRes.text();
-    return c.redirect(`${row.redirect_uri}#error=version&message=${encodeURIComponent(errText)}`, 302);
+    return c.redirect(`${row.redirectUri}#error=version&message=${encodeURIComponent(errText)}`, 302);
   }
 
   const versionData = (await versionRes.json()) as { versionNumber?: number };
@@ -293,7 +287,7 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
 
   if (!deployRes.ok) {
     const errText = await deployRes.text();
-    return c.redirect(`${row.redirect_uri}#error=deploy&message=${encodeURIComponent(errText)}`, 302);
+    return c.redirect(`${row.redirectUri}#error=deploy&message=${encodeURIComponent(errText)}`, 302);
   }
 
   const deployData = (await deployRes.json()) as { deployment?: { entryPoints?: Array<{ webApp?: { url: string } }> } };
@@ -302,8 +296,8 @@ connectSheetsApp.get("/api/connect-sheets/callback", async (c) => {
     `https://script.google.com/macros/s/${scriptId}/exec`;
 
   // 7. Redirect to admin with success
-  const fragment = `url=${encodeURIComponent(webAppUrl)}&spreadsheetUrl=${encodeURIComponent(spreadsheetUrl)}&formId=${encodeURIComponent(row.form_id)}`;
-  return c.redirect(`${row.redirect_uri}#${fragment}`, 302);
+  const fragment = `url=${encodeURIComponent(webAppUrl)}&spreadsheetUrl=${encodeURIComponent(spreadsheetUrl)}&formId=${encodeURIComponent(row.formId)}`;
+  return c.redirect(`${row.redirectUri}#${fragment}`, 302);
 });
 
 function columnLetter(n: number): string {

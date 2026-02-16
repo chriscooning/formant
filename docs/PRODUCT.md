@@ -8,6 +8,11 @@
 - **Claude Skill** — Formant teaches AI how to generate valid schemas and deploy
 - **Natural language to form** — "I want a customer feedback form with a 5-star rating" → done
 
+### One-Command Deploy
+
+- **Vercel + Connect Google Sheet** — `pnpm formant deploy --target vercel --with-sheets` deploys Worker, form, and admin in one flow
+- **Vercel + admin** — `--with-admin` for form + admin panel, IndexedDB responses
+
 ### One-Click Google Sheets
 
 - **OAuth flow** — No clasp, no manual setup, no copying URLs
@@ -30,7 +35,7 @@
 
 ## For End Users
 
-- **Typeform-style flow** — One question at a time, smooth transitions
+- **Conversational form** — One question at a time, smooth transitions
 - **Dark/light mode** — System detection + manual toggle
 - **Keyboard navigation** — Power users love it
 - **Multiple destinations** — Excel, Sheets, webhook, Cloudflare — or all at once

@@ -4,7 +4,8 @@
 import type { DbAdapter } from "./db/interface";
 
 export type Bindings = {
-  DB: D1Database;
+  /** D1 database (Cloudflare only; used to construct D1Adapter) */
+  DB?: D1Database;
   db: DbAdapter;
   /** Google OAuth for Connect Google Sheet (optional) */
   GOOGLE_CLIENT_ID?: string;

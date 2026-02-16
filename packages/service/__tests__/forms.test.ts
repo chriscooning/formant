@@ -24,14 +24,17 @@ async function createForm(
   apiKey: string = API_KEY,
   schema: object = TEST_SCHEMA,
   html: string = TEST_HTML,
+  clientId?: string,
 ) {
+  const body: Record<string, unknown> = { html, schema };
+  if (clientId !== undefined) body.id = clientId;
   const res = await SELF.fetch("http://localhost/api/forms", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ html, schema }),
+    body: JSON.stringify(body),
   });
   return { res, body: (await res.json()) as Record<string, unknown> };
 }
@@ -101,6 +104,22 @@ describe("POST /api/forms", () => {
     });
 
     expect(res.status).toBe(400);
+  });
+
+  it("accepts client-provided id when valid (for deploy scripts)", async () => {
+    const { res, body } = await createForm(
+      API_KEY,
+      TEST_SCHEMA,
+      TEST_HTML,
+      "my-form-1234",
+    );
+
+    expect(res.status).toBe(201);
+    expect(body.id).toBe("my-form-1234");
+    expect(body.url).toBe("/f/my-form-1234");
+
+    const row = await getFormById(env.DB, "my-form-1234");
+    expect(row).not.toBeNull();
   });
 
   it("returns 400 for invalid JSON body", async () => {

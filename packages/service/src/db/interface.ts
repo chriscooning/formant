@@ -76,4 +76,20 @@ export interface DbAdapter {
     options?: { status?: string },
   ): Promise<ResponseRow[]>;
   getAnalytics(formId: string, days: 7 | 14 | 30): Promise<AnalyticsResult>;
+  /** OAuth sessions for Connect Google Sheet (optional; used by connect-sheets route) */
+  insertOAuthSession(params: {
+    state: string;
+    formId: string;
+    schemaJson: string;
+    redirectUri: string;
+    codeVerifier: string;
+  }): Promise<void>;
+  getAndDeleteOAuthSession(
+    state: string,
+  ): Promise<{
+    formId: string;
+    schemaJson: string;
+    redirectUri: string;
+    codeVerifier: string;
+  } | null>;
 }

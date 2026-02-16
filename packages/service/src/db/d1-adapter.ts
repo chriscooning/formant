@@ -96,4 +96,25 @@ export class D1Adapter implements DbAdapter {
   ): Promise<AnalyticsResult> {
     return queries.getAnalytics(this.db, formId, days);
   }
+
+  async insertOAuthSession(params: {
+    state: string;
+    formId: string;
+    schemaJson: string;
+    redirectUri: string;
+    codeVerifier: string;
+  }): Promise<void> {
+    return queries.insertOAuthSession(this.db, params);
+  }
+
+  async getAndDeleteOAuthSession(
+    state: string,
+  ): Promise<{
+    formId: string;
+    schemaJson: string;
+    redirectUri: string;
+    codeVerifier: string;
+  } | null> {
+    return queries.getAndDeleteOAuthSession(this.db, state);
+  }
 }

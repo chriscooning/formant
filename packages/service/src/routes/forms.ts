@@ -15,7 +15,7 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
-  const { html, schema } = body;
+  const { html, schema, id: clientId } = body;
 
   if (!html || typeof html !== "string") {
     return c.json({ error: "html is required and must be a string" }, 400);
@@ -24,7 +24,12 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
     return c.json({ error: "schema is required and must be an object" }, 400);
   }
 
-  const id = generateFormId();
+  // Optional client-provided id (for deploy scripts that need to patch schema before upload)
+  const id =
+    typeof clientId === "string" &&
+    /^[a-zA-Z0-9_-]{8,64}$/.test(clientId)
+      ? clientId
+      : generateFormId();
   const apiKeyHash = c.get("apiKeyHash");
   const schemaObj = schema as Record<string, unknown>;
 

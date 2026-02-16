@@ -266,7 +266,7 @@ A **"Download Responses"** button is always visible on the ending screen regardl
 | `excel`   | —               | Client-side XLSX download. `filename` is optional. |
 | `sheets`  | `url`           | POST to a Google Apps Script web app URL |
 | `webhook` | `url`           | POST JSON to any URL. Optional `headers`. Retries once on 5xx with 1s delay. 10s timeout. |
-| `service` | `formId`        | POST to the Formant hosting service. Optional `endpoint` for custom deployments. |
+| `service` | `formId`        | POST to the Formant hosting service. Optional `endpoint` for Cloudflare Workers or Vercel Postgres API. |
 
 **Default recommendation:** Always include `{ "type": "excel" }` as a fallback so the user can always download their responses even if other destinations fail.
 
@@ -326,7 +326,7 @@ Before generating, make sure you understand:
    - **Excel download** (always include as fallback) — works offline, no setup
    - **Google Sheets** — requires a deployed Apps Script URL (see SETUP.md)
    - **Webhook** — any URL that accepts POST JSON. Supports custom headers for auth. Great for Zapier, Slack, Make.com, n8n, or custom APIs.
-   - **Formant service** — hosted collection with export. Requires API key + deployment.
+   - **Formant service** — hosted collection with export. Requires API key + deployment (Cloudflare D1 or Vercel Postgres).
    - Users can pick **multiple destinations** — all fire in parallel.
 5. **Tone** — Formal or casual? This affects title/subtitle wording.
 

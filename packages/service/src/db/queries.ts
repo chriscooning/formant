@@ -229,6 +229,66 @@ export async function getResponsesByFormId(
   };
 }
 
+// ─── OAuth Sessions (Connect Google Sheet) ───
+
+export async function insertOAuthSession(
+  db: D1Database,
+  params: {
+    state: string;
+    formId: string;
+    schemaJson: string;
+    redirectUri: string;
+    codeVerifier: string;
+  },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO oauth_sessions (state, form_id, schema_json, redirect_uri, code_verifier)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      params.state,
+      params.formId,
+      params.schemaJson,
+      params.redirectUri,
+      params.codeVerifier,
+    )
+    .run();
+}
+
+export async function getAndDeleteOAuthSession(
+  db: D1Database,
+  state: string,
+): Promise<{
+  formId: string;
+  schemaJson: string;
+  redirectUri: string;
+  codeVerifier: string;
+} | null> {
+  const row = await db
+    .prepare(
+      "SELECT form_id, schema_json, redirect_uri, code_verifier FROM oauth_sessions WHERE state = ?",
+    )
+    .bind(state)
+    .first<{
+      form_id: string;
+      schema_json: string;
+      redirect_uri: string;
+      code_verifier: string;
+    }>();
+
+  if (!row) return null;
+
+  await db.prepare("DELETE FROM oauth_sessions WHERE state = ?").bind(state).run();
+
+  return {
+    formId: row.form_id,
+    schemaJson: row.schema_json,
+    redirectUri: row.redirect_uri,
+    codeVerifier: row.code_verifier,
+  };
+}
+
 export async function getResponseCount(
   db: D1Database,
   formId: string,

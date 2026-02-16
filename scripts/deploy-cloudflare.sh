@@ -5,6 +5,9 @@ set -euo pipefail
 #
 # Upload-only mode: set WORKER_URL to skip Worker deploy and only upload the form.
 # Example: WORKER_URL=https://formant.SUBDOMAIN.workers.dev bash scripts/deploy-cloudflare.sh forms/<name>.html
+#
+# Worker-only mode: set WORKER_ONLY=1 to deploy Worker only (no form upload).
+# Used by deploy-vercel.sh --with-sheets to get the API for Connect Google Sheet.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE_DIR="$ROOT_DIR/packages/service"
@@ -113,6 +116,13 @@ else
 
   # Return to project root before form upload (avoids path resolution issues)
   cd "$ROOT_DIR"
+fi
+
+# ─── Worker-only mode: exit after deploy (no form upload) ───
+
+if [[ "${WORKER_ONLY:-0}" == "1" || "${WORKER_ONLY:-false}" == "true" ]]; then
+  echo "  Worker URL: $WORKER_URL (WORKER_ONLY — form upload skipped)"
+  exit 0
 fi
 
 # ─── Step 5: Generate API key ───

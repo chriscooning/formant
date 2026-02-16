@@ -1,0 +1,24 @@
+{
+  "name": "@formant/service-vercel",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "dev": "vercel dev",
+    "deploy": "vercel deploy",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@formant/service": "workspace:*",
+    "@vercel/postgres": "^0.10.0",
+    "hono": "latest",
+    "nanoid": "latest",
+    "xlsx": "latest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "typescript": "^5.7",
+    "vercel": "latest",
+    "vitest": "^3"
+  }
+}
