@@ -2,7 +2,7 @@
 
 **Quick start:** For the simplest deploy with database: `pnpm formant deploy form.html --target cloudflare`
 
-This document covers all deploy targets. For the recommended path (share with others or preview locally), see the [README](../README.md#deploy-options).
+This document covers all deploy targets. For the recommended path (share with others or preview locally), see the [README](../README.md#deploy).
 
 ---
 

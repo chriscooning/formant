@@ -3,7 +3,7 @@ name: formant
 description: Generate interactive HTML forms from natural language. Use when the user wants to create a form, survey, questionnaire, registration page, or feedback form. Also use when mentioning Formant, form schemas, or form building.
 ---
 
-> **Role:** Cursor IDE skill. Used when Formant skill is active. Focus: deploy workflow, decision trees, quick reference. When deploy options change, update this file and root `SKILL.md`. Schema changes: also update `skill/SKILL.md`.
+> **Role:** Claude skill for form generation. Focus: deploy workflow, decision trees, quick reference. When deploy options change, update this file. Schema changes: also update `skill/SKILL.md`.
 
 # Formant — Build Forms from Natural Language
 
@@ -197,4 +197,4 @@ bash scripts/setup-sheets.sh
 
 ## Full Schema Reference
 
-For complete field property tables, branching rules, submit destination details, theme configuration, and worked examples, see [schema-reference.md](schema-reference.md).
+For complete field property tables, branching rules, submit destination details, theme configuration, and worked examples, see [.cursor/skills/formant/schema-reference.md](.cursor/skills/formant/schema-reference.md).

@@ -2,6 +2,37 @@
 
 We welcome contributions, but we're strict about quality. We want thoughtful, human work — not AI-generated slop.
 
+## Tech Stack
+
+- **TypeScript** — strict mode across all packages
+- **React 18** — functional components for form rendering
+- **esbuild** — bundles forms into single HTML files
+- **Hono** — lightweight API framework (Cloudflare Workers)
+- **Cloudflare D1** — SQLite database for hosted response collection (Cloudflare)
+- **Vercel Postgres** — Postgres for hosted response collection (Vercel + --with-backend)
+- **Vitest** + **Playwright** — unit and E2E testing
+- **pnpm workspaces** — monorepo package management
+
+## Project Structure
+
+```
+formant/
+├── SKILL.md           # Root skill (Claude Code, skills directories)
+├── packages/
+│   ├── core/          # Types, validation, form engine (no React)
+│   ├── renderer/      # React components for rendering forms
+│   ├── html-builder/  # Bundles schema → single HTML file + CLI
+│   ├── service/       # Cloudflare Workers API (Hono + D1)
+│   └── service-vercel/  # Vercel Edge API (Hono + Postgres) — same interface as service
+├── apps/
+│   └── e2e/           # Playwright end-to-end tests
+├── forms/             # Built forms (JSON schemas tracked, HTML gitignored)
+├── scripts/           # Deploy scripts and Google Sheets connector
+└── .cursor/
+    ├── rules/         # Agent conventions (auto-applied)
+    └── skills/        # Cursor skill for form generation
+```
+
 ## Before You Start
 
 1. **Read the codebase** — Understand what you're changing. Don't blindly apply patterns from other projects.
