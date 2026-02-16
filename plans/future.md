@@ -2,6 +2,15 @@
 
 Ideas for later — not blocking anything, just worth doing when the time is right.
 
+## Skills Directory / Public Appeal
+
+- [ ] **GitHub topics** — Add `claude-skill`, `claude-code`, `anthropic`, `form-builder` (gear icon next to About)
+- [ ] **Demo URL in About** — Add live form URL to GitHub repo About section
+- [ ] **SKILL.md version** — Add `version: "1.0.0"` to root SKILL.md frontmatter for directory compatibility
+- [ ] **README GIF** — 10–15 sec form flow: welcome → 2–3 questions → ending, show dark/light mode
+- [ ] **"Try it" demo link** — Deploy bake-sale form, add URL to README
+- [ ] **Example schemas** — Add 1–2 more (NPS, feedback) alongside bake-sale
+
 ## npm create formant
 
 Publish a `create-formant` (or similar) package so users can scaffold a new project without cloning the monorepo:
