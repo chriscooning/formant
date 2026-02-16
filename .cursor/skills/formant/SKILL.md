@@ -155,6 +155,12 @@ All branches must eventually reach the `ending` field.
 8. Use descriptive IDs (`"satisfaction"` not `"q3"`)
 9. Don't use `required: true` on `welcome`, `statement`, or `ending`
 
+## Prefill via URL params
+
+Forms accept pre-filled values from URL query params. Param names match field IDs.
+
+Example: `https://example.com/form.html?name=John&email=john@example.com` — the `name` and `email` fields will be pre-filled when the user reaches them. Useful for links from emails, internal tools, or CRM systems.
+
 ## Design Guidelines
 
 - Start with `welcome`, end with `ending`

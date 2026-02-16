@@ -30,7 +30,7 @@ Ideas to make Formant a skill most developers and IT admins would want in their 
 - [ ] **Template library** — Pre-built schemas: "Use the NPS template", "Employee feedback form", "IT ticket request", "Equipment checkout", "Incident report", "Access request", "Contact form"
 - [ ] **IT admin use cases** — Call out in skill: helpdesk/ticket forms, equipment checkout, access requests, incident reporting, internal feedback
 - [ ] **Integration examples** — Zapier/Make webhook examples, Slack notification on submit, Airtable destination, email-to-list, Notion sync
-- [ ] **Pre-fill via URL params** — `?name=John&email=john@example.com` for links from emails/internal tools
+- [x] **Pre-fill via URL params** — `?name=John&email=john@example.com` for links from emails/internal tools (implemented)
 - [ ] **Embed codes** — iframe snippet, React component export, "Copy embed code" for existing sites
 - [ ] **Security** — Password-protected forms, optional CAPTCHA, GDPR-friendly defaults
 - [ ] **Simpler happy path** — "80% use case" in skill: Excel or Sheets or webhook, Vercel or Cloudflare, 3–5 questions
@@ -52,6 +52,7 @@ Ideas to make Formant a skill most developers and IT admins would want in their 
 ## Other ideas
 
 - [ ] **Cloudflare isolated DB mode** — `--target cloudflare --isolated` spins up a new D1 + Worker per form. Full isolation, clean deletion. See `plans/cloudflare-isolated-db-mode.md`. D1 free tier: 5 DBs.
+- [ ] **Agent use improvements** — Input ids, aria-labels, schema on DOM, direct API docs. See `plans/agent-use-improvements.md`.
 - [ ] **Share feedback with Formant** — Dedicated feedback form (README or docs) for users to share experience, feature requests, bugs. Transparent, opt-in.
 - [ ] Web playground — paste a schema, see the form live (no install needed)
 - [ ] `formant publish` — one command to push updates to an already-deployed form

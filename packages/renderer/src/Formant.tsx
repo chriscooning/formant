@@ -20,9 +20,11 @@ const NON_ANSWERABLE = new Set(["welcome", "statement", "ending"]);
 
 export interface FormantProps {
   schema: FormSchema;
+  /** Pre-filled answers (e.g. from URL params ?name=John&email=john@example.com) */
+  initialAnswers?: Record<string, unknown>;
 }
 
-export const Formant: React.FC<FormantProps> = ({ schema }) => {
+export const Formant: React.FC<FormantProps> = ({ schema, initialAnswers }) => {
   const {
     currentField,
     currentIndex,
@@ -35,7 +37,7 @@ export const Formant: React.FC<FormantProps> = ({ schema }) => {
     setAnswer,
     setError,
     state,
-  } = useFormEngine(schema);
+  } = useFormEngine(schema, initialAnswers);
 
   const { mode, toggle } = useTheme(schema.theme?.defaultMode ?? "auto");
 

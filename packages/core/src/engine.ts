@@ -13,11 +13,14 @@ export interface EngineState {
 
 /**
  * Create the initial engine state.
+ * @param initialAnswers - Optional pre-filled answers (e.g. from URL params).
  */
-export function createInitialState(): EngineState {
+export function createInitialState(
+  initialAnswers?: Record<string, unknown>
+): EngineState {
   return {
     currentIndex: 0,
-    answers: {},
+    answers: initialAnswers ? { ...initialAnswers } : {},
     history: [],
     startedAt: Date.now(),
   };

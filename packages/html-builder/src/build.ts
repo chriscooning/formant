@@ -59,10 +59,15 @@ import { createElement } from "react";
 
 var ReactDOM = window.ReactDOM;
 var schema = window.__FORMANT_SCHEMA__;
+var initialAnswers = {};
+try {
+  var params = new URLSearchParams(window.location.search);
+  params.forEach(function(v, k) { initialAnswers[k] = v; });
+} catch (_) {}
 var container = document.getElementById("root");
 if (container) {
   var root = ReactDOM.createRoot(container);
-  root.render(createElement(Formant, { schema: schema }));
+  root.render(createElement(Formant, { schema: schema, initialAnswers: initialAnswers }));
 }
 `;
 

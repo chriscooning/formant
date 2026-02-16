@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { FormSchema, Field } from "@formant/core";
 import {
   createInitialState,
@@ -10,6 +10,29 @@ import {
   validateField,
   type EngineState,
 } from "@formant/core";
+
+/** Coerce URL param strings to correct types for number/rating/scale fields. */
+function coerceInitialAnswers(
+  raw: Record<string, unknown>,
+  schema: FormSchema
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const fieldById = new Map(schema.fields.map((f) => [f.id, f]));
+  for (const [id, value] of Object.entries(raw)) {
+    const field = fieldById.get(id);
+    if (!field || value === undefined || value === null) continue;
+    if (field.type === "number") {
+      const num = Number(value);
+      if (!Number.isNaN(num)) result[id] = num;
+    } else if (field.type === "rating" || field.type === "scale") {
+      const num = Number(value);
+      if (!Number.isNaN(num) && Number.isInteger(num)) result[id] = num;
+    } else {
+      result[id] = value;
+    }
+  }
+  return result;
+}
 
 export interface UseFormEngineReturn {
   currentField: Field | null;
@@ -25,8 +48,17 @@ export interface UseFormEngineReturn {
   state: EngineState;
 }
 
-export function useFormEngine(schema: FormSchema): UseFormEngineReturn {
-  const [state, setState] = useState<EngineState>(() => createInitialState());
+export function useFormEngine(
+  schema: FormSchema,
+  initialAnswers?: Record<string, unknown>
+): UseFormEngineReturn {
+  const coerced = useMemo(
+    () => (initialAnswers ? coerceInitialAnswers(initialAnswers, schema) : undefined),
+    [initialAnswers, schema]
+  );
+  const [state, setState] = useState<EngineState>(() =>
+    createInitialState(coerced)
+  );
   const [error, setError] = useState<string | null>(null);
 
   const currentField: Field | null =

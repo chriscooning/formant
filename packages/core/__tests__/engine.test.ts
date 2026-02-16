@@ -38,6 +38,12 @@ describe("createInitialState", () => {
     expect(state.startedAt).toBeGreaterThanOrEqual(before);
     expect(state.startedAt).toBeLessThanOrEqual(after);
   });
+
+  it("accepts initialAnswers for prefill (e.g. URL params)", () => {
+    const state = createInitialState({ name: "Alice", email: "alice@example.com" });
+    expect(state.answers).toEqual({ name: "Alice", email: "alice@example.com" });
+    expect(state.currentIndex).toBe(0);
+  });
 });
 
 // ─── resolveNextIndex ───
