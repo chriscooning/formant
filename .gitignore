@@ -16,3 +16,5 @@ packages/service/.dev.vars
 
 # Deploy temp files (left behind on interrupt)
 .deploy-cf-out-*
+.deploy-api-out-*
+.formant-patched-*.html
