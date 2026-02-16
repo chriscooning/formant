@@ -222,6 +222,41 @@ describe("submitResponses", () => {
     createElementSpy.mockRestore();
   });
 
+  it("csv download triggers blob download (mocked)", async () => {
+    const mockCreateObjectURL = vi.fn(() => "blob:mock-url");
+    const mockClick = vi.fn();
+
+    vi.stubGlobal("URL", {
+      createObjectURL: mockCreateObjectURL,
+      revokeObjectURL: vi.fn(),
+    });
+
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "a") {
+        const anchor = origCreateElement("a");
+        anchor.click = mockClick;
+        return anchor;
+      }
+      return origCreateElement(tag);
+    });
+
+    const schema: FormSchema = {
+      ...baseSchema,
+      submit: {
+        destinations: [{ type: "csv", filename: "test-export" }],
+      },
+    };
+
+    const results = await submitResponses(schema, answers, metadata);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.destination).toBe("csv");
+    expect(results[0]?.success).toBe(true);
+    expect(mockCreateObjectURL).toHaveBeenCalledOnce();
+    expect(mockClick).toHaveBeenCalledOnce();
+  });
+
   it("with local destination calls completePartialToLocal and returns success (no Excel download)", async () => {
     const schema: FormSchema = {
       ...baseSchema,

@@ -813,8 +813,21 @@ describe("validateSchema", () => {
           { type: "sheets", url: "https://script.google.com/exec" },
           { type: "webhook", url: "https://hooks.example.com/form" },
           { type: "excel" },
+          { type: "csv", filename: "export" },
         ],
       },
+    };
+    expect(validateSchema(schema)).toEqual([]);
+  });
+
+  it("accepts csv destination", () => {
+    const schema: FormSchema = {
+      id: "csv-form",
+      fields: [
+        { id: "q1", type: "text", title: "Q1" },
+        { id: "end", type: "ending", title: "End" },
+      ],
+      submit: { destinations: [{ type: "csv" }] },
     };
     expect(validateSchema(schema)).toEqual([]);
   });

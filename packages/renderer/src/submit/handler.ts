@@ -2,7 +2,7 @@ import type { FormSchema, FormResponse } from "@formant/core";
 import { submitToSheets } from "./sheets";
 import { submitToWebhook } from "./webhook";
 import { submitToService } from "./service";
-import { downloadExcel } from "./excel";
+import { downloadExcel, downloadCSV } from "./excel";
 import { completePartialToLocal } from "./local";
 import { getSessionId } from "../utils/sessionId";
 import { getStoredSheetsUrl } from "../utils/sheetsStorage";
@@ -67,6 +67,10 @@ export async function submitResponses(
         case "excel":
           downloadExcel(schema, response, dest.filename);
           return { destination: "excel", success: true };
+
+        case "csv":
+          downloadCSV(schema, response, dest.filename);
+          return { destination: "csv", success: true };
 
         case "local":
           await completePartialToLocal(schema.id, getSessionId(), response);

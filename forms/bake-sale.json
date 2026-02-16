@@ -1,0 +1,126 @@
+{
+  "id": "bake-sale-demo",
+  "title": "Bake Sale Order Form",
+  "fields": [
+    {
+      "id": "welcome",
+      "type": "welcome",
+      "title": "Welcome to the Bake Sale!",
+      "subtitle": "This demo shows every Formant field type. Order treats and see how it works.",
+      "buttonText": "Let's go"
+    },
+    {
+      "id": "name",
+      "type": "text",
+      "title": "What's your name?",
+      "required": true,
+      "placeholder": "Type your name..."
+    },
+    {
+      "id": "email",
+      "type": "email",
+      "title": "Email for order confirmation?",
+      "required": true,
+      "placeholder": "you@example.com"
+    },
+    {
+      "id": "phone",
+      "type": "phone",
+      "title": "Phone number for pickup?",
+      "placeholder": "+1 (555) 000-0000"
+    },
+    {
+      "id": "recipe-link",
+      "type": "url",
+      "title": "Got a recipe to share? (optional)",
+      "placeholder": "https://..."
+    },
+    {
+      "id": "quantity",
+      "type": "number",
+      "title": "How many items would you like?",
+      "min": 1,
+      "max": 24,
+      "step": 1,
+      "required": true,
+      "placeholder": "e.g. 6"
+    },
+    {
+      "id": "favorite-bake",
+      "type": "choice",
+      "title": "What's your favorite bake?",
+      "options": ["Brownies", "Cookies", "Cupcakes", "Banana bread", "Other"],
+      "allowOther": true
+    },
+    {
+      "id": "items",
+      "type": "multi_choice",
+      "title": "Which items would you like to order?",
+      "options": ["Chocolate chip cookies", "Brownies", "Lemon bars", "Banana bread", "Rice Krispie treats"],
+      "minSelections": 1,
+      "maxSelections": 5
+    },
+    {
+      "id": "excitement",
+      "type": "rating",
+      "title": "How excited are you for the bake sale?",
+      "max": 5,
+      "labels": { "1": "Meh", "3": "Pretty excited", "5": "Very excited!" }
+    },
+    {
+      "id": "recommend",
+      "type": "scale",
+      "title": "How likely are you to tell a friend?",
+      "min": 0,
+      "max": 10,
+      "minLabel": "Not likely",
+      "maxLabel": "Very likely"
+    },
+    {
+      "id": "volunteer",
+      "type": "dropdown",
+      "title": "Want to volunteer? Pick a shift:",
+      "options": ["Friday 9am–12pm", "Friday 12pm–3pm", "Saturday 9am–12pm", "Saturday 12pm–3pm", "No thanks"],
+      "searchable": false
+    },
+    {
+      "id": "statement",
+      "type": "statement",
+      "title": "Almost done!",
+      "subtitle": "Just a couple more questions about your order.",
+      "buttonText": "Continue"
+    },
+    {
+      "id": "allergies",
+      "type": "textarea",
+      "title": "Any allergies or special requests?",
+      "placeholder": "e.g. nut-free, gluten-free..."
+    },
+    {
+      "id": "pickup-date",
+      "type": "date",
+      "title": "Preferred pickup date?"
+    },
+    {
+      "id": "bring-friend",
+      "type": "yes_no",
+      "title": "Will you bring a friend?",
+      "yesLabel": "Yes",
+      "noLabel": "No"
+    },
+    {
+      "id": "end",
+      "type": "ending",
+      "title": "Thank you!",
+      "subtitle": "Your order will be ready at pickup. Responses download as CSV.",
+      "showSummary": true
+    }
+  ],
+  "submit": {
+    "destinations": [{ "type": "csv", "filename": "bake-sale-order" }]
+  },
+  "theme": {
+    "accent": "#c45c26",
+    "defaultMode": "auto"
+  }
+}

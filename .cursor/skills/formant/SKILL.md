@@ -101,6 +101,7 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 | Option | Schema mapping | Notes |
 |--------|----------------|-------|
 | Excel download | `{ "type": "excel" }` | Client-side XLSX. Works on all hosting targets. |
+| CSV download | `{ "type": "csv" }` | Client-side CSV. Lighter than Excel, good for dev. |
 | Local (IndexedDB) | `{ "type": "local" }` | Kiosk mode. Use `pnpm formant build --local` for form + admin. |
 | Connect Google Sheet | `{ "type": "local" }` + Worker + admin | One-click OAuth. Use `pnpm formant deploy --target vercel --with-sheets`. |
 | Google Sheets (Apps Script) | `{ "type": "sheets", "url": "..." }` | Requires `scripts/setup-sheets.sh` |
@@ -108,19 +109,20 @@ Generate beautiful, one-question-at-a-time HTML forms. Forms are self-contained 
 | Cloudflare D1 | `{ "type": "service", "formId": "...", "endpoint": "..." }` | Requires Cloudflare deploy |
 | Vercel Postgres | `{ "type": "service", "formId": "...", "endpoint": "https://your-api.vercel.app" }` | Deploy `service-vercel`; `POSTGRES_URL` required |
 
-**Rule:** Always include Excel in `submit.destinations` unless the user explicitly opts out. Multiple destinations fire in parallel.
+**Rule:** Always include Excel or CSV in `submit.destinations` unless the user explicitly opts out. Multiple destinations fire in parallel.
 
 **Example:** *"I'll need a few details before building. What questions do you want to ask, and where should responses go — Excel download, Google Sheets, a webhook URL, or Cloudflare D1? I'll include Excel as a fallback unless you prefer otherwise."*
 
 ## Submit Destinations
 
-Multiple destinations fire in parallel. Always include `excel` as a fallback (except for local/kiosk mode).
+Multiple destinations fire in parallel. Always include `excel` or `csv` as a fallback (except for local/kiosk mode).
 
 - **allowSubmitterDownload** (optional): When `false`, hides the "Download Responses" button on the thank-you screen. Use for kiosk/local forms where the admin exports from the admin panel. Default: `true`. Set automatically to `false` when building with `--local`.
 
 | Type | Required Fields | Notes |
 |------|-----------------|-------|
 | `excel` | -- | Client-side XLSX download. Optional `filename`. |
+| `csv` | -- | Client-side CSV download. Optional `filename`. Lighter, good for dev. |
 | `local` | -- | IndexedDB storage. Use with `--local` build for form + admin. |
 | `sheets` | `url` | Google Apps Script web app URL |
 | `webhook` | `url` | POST JSON. Optional `headers`. Retries once on 5xx. |
@@ -143,7 +145,7 @@ All branches must eventually reach the `ending` field.
 4. All `next` targets reference valid field `id`s
 5. `choice` and `dropdown` have non-empty `options`
 6. `scale` has both `min` and `max`
-7. `submit.destinations` includes at least `{ "type": "excel" }`
+7. `submit.destinations` includes at least `{ "type": "excel" }` or `{ "type": "csv" }`
 8. Use descriptive IDs (`"satisfaction"` not `"q3"`)
 9. Don't use `required: true` on `welcome`, `statement`, or `ending`
 

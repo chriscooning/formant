@@ -254,6 +254,7 @@ A **"Download Responses"** button is always visible on the ending screen regardl
 "submit": {
   "destinations": [
     { "type": "excel", "filename": "my-responses" },
+    { "type": "csv", "filename": "my-responses" },
     { "type": "sheets", "url": "https://script.google.com/macros/s/.../exec" },
     { "type": "webhook", "url": "https://hooks.example.com/abc", "headers": { "Authorization": "Bearer token" } },
     { "type": "service", "formId": "abc123" }
@@ -264,6 +265,7 @@ A **"Download Responses"** button is always visible on the ending screen regardl
 | Type      | Required Fields | Description |
 |-----------|-----------------|-------------|
 | `excel`   | —               | Client-side XLSX download. `filename` is optional. |
+| `csv`     | —               | Client-side CSV download. `filename` is optional. Lighter, good for dev. |
 | `sheets`  | `url`           | POST to a Google Apps Script web app URL |
 | `webhook` | `url`           | POST JSON to any URL. Optional `headers`. Retries once on 5xx with 1s delay. 10s timeout. |
 | `service` | `formId`        | POST to the Formant hosting service. Optional `endpoint` for custom deployments. |

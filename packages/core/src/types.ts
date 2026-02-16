@@ -176,6 +176,11 @@ export interface ExcelDestination {
   filename?: string;
 }
 
+export interface CsvDestination {
+  type: "csv";
+  filename?: string;
+}
+
 export interface LocalDestination {
   type: "local";
 }
@@ -185,6 +190,7 @@ export type SubmitDestination =
   | WebhookDestination
   | ServiceDestination
   | ExcelDestination
+  | CsvDestination
   | LocalDestination;
 
 // ─── Theme ───

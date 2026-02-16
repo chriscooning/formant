@@ -14,11 +14,14 @@ fi
 pnpm install
 
 echo ""
+echo "  Building demo form (bake sale — shows all field types)..."
+pnpm formant build forms/bake-sale.json -o forms/bake-sale.html
+echo ""
 echo "  ✓ Ready!"
 echo ""
-echo "  Open this project in Cursor and ask:"
-echo "    \"I want to create a feedback form\""
+echo "  Preview the demo:"
+echo "    pnpm formant deploy forms/bake-sale.html --target offline"
 echo ""
-echo "  Forms are built from JSON. Build before opening:"
-echo "    pnpm formant build forms/simple-form.json -o forms/simple-form.html"
+echo "  Or open in Cursor and ask:"
+echo "    \"I want to create a feedback form\""
 echo ""

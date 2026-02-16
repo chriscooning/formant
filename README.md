@@ -15,6 +15,12 @@ bash setup.sh
 cursor .
 ```
 
+Setup builds a **demo form** (`forms/bake-sale.html`) that showcases every field type. Preview it:
+
+```bash
+pnpm formant deploy forms/bake-sale.html --target offline
+```
+
 Then in the Cursor chat, just say what you need:
 
 > "I want to create a customer feedback form with a 5-star rating and a comments box"
@@ -30,7 +36,9 @@ The AI handles the rest — generates the schema, builds the HTML, and asks how 
 | **Vercel + Postgres** | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
 | **Cloudflare** | `pnpm formant deploy forms/my-form.html --target cloudflare` |
 
-Both give you a shareable URL, server-side storage, dashboard, and CSV/XLSX export. **Vercel + Postgres** requires `vercel postgres create` and migrations. See [plans/deploy-vercel-conventions.md](plans/deploy-vercel-conventions.md).
+Both give you a shareable URL, server-side storage, dashboard, and CSV/XLSX export.
+
+**Minimal setup:** Cloudflare or Vercel account + CLI login. For Vercel + Postgres, run `vercel postgres create` once in the project; migrations run on deploy. See [plans/deploy-vercel-conventions.md](plans/deploy-vercel-conventions.md).
 
 ### Preview / test locally
 
@@ -96,6 +104,10 @@ formant/
     ├── rules/         # Agent conventions (auto-applied)
     └── skills/        # Cursor skill for form generation
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for code standards and PR expectations.
 
 ## License
 
