@@ -107,12 +107,7 @@ describe("POST /api/forms", () => {
   });
 
   it("accepts client-provided id when valid (for deploy scripts)", async () => {
-    const { res, body } = await createForm(
-      API_KEY,
-      TEST_SCHEMA,
-      TEST_HTML,
-      "my-form-1234",
-    );
+    const { res, body } = await createForm(API_KEY, TEST_SCHEMA, TEST_HTML, "my-form-1234");
 
     expect(res.status).toBe(201);
     expect(body.id).toBe("my-form-1234");
@@ -156,9 +151,7 @@ describe("GET /f/:id", () => {
 
     const res = await SELF.fetch(`http://localhost/f/${formId}`);
 
-    expect(res.headers.get("Cache-Control")).toContain(
-      "stale-while-revalidate",
-    );
+    expect(res.headers.get("Cache-Control")).toContain("stale-while-revalidate");
   });
 
   it("increments view count", async () => {
@@ -261,6 +254,180 @@ describe("DELETE /api/forms/:id", () => {
   });
 });
 
+// ─── GET /api/forms (list) ───
+
+describe("GET /api/forms", () => {
+  it("lists only the caller's forms, newest first, without html/schema", async () => {
+    const { body: a } = await createForm(API_KEY);
+    const { body: b } = await createForm(API_KEY);
+    await createForm(OTHER_API_KEY);
+
+    const res = await SELF.fetch("http://localhost/api/forms", {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { forms: Record<string, unknown>[] };
+    expect(body.forms).toHaveLength(2);
+    const ids = body.forms.map((f) => f.id);
+    expect(ids).toContain(a.id);
+    expect(ids).toContain(b.id);
+
+    const form = body.forms[0]!;
+    expect(form.title).toBe("Test Form");
+    expect(form.url).toBe(`/f/${form.id}`);
+    expect(form.view_count).toBe(0);
+    expect(form.submit_count).toBe(0);
+    expect(form.html).toBeUndefined();
+    expect(form.schema).toBeUndefined();
+  });
+
+  it("returns an empty list for a key with no forms", async () => {
+    const res = await SELF.fetch("http://localhost/api/forms", {
+      headers: { Authorization: `Bearer ${OTHER_API_KEY}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { forms: unknown[] };
+    expect(body.forms).toEqual([]);
+  });
+
+  it("returns 401 without auth", async () => {
+    const res = await SELF.fetch("http://localhost/api/forms");
+    expect(res.status).toBe(401);
+  });
+});
+
+// ─── GET /api/forms/:id ───
+
+describe("GET /api/forms/:id", () => {
+  it("returns schema and metadata for an owned form", async () => {
+    const { body: createBody } = await createForm();
+    const formId = createBody.id as string;
+
+    const res = await SELF.fetch(`http://localhost/api/forms/${formId}`, {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.id).toBe(formId);
+    expect(body.title).toBe("Test Form");
+    expect(body.url).toBe(`/f/${formId}`);
+    expect(body.schema).toEqual(TEST_SCHEMA);
+    expect(body.created_at).toBeDefined();
+    expect(body.html).toBeUndefined();
+  });
+
+  it("returns 404 for nonexistent form", async () => {
+    const res = await SELF.fetch("http://localhost/api/forms/nonexistent1", {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 with wrong API key", async () => {
+    const { body: createBody } = await createForm(API_KEY);
+    const res = await SELF.fetch(`http://localhost/api/forms/${createBody.id}`, {
+      headers: { Authorization: `Bearer ${OTHER_API_KEY}` },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 401 without auth", async () => {
+    const { body: createBody } = await createForm();
+    const res = await SELF.fetch(`http://localhost/api/forms/${createBody.id}`);
+    expect(res.status).toBe(401);
+  });
+});
+
+// ─── PUT /api/forms/:id ───
+
+describe("PUT /api/forms/:id", () => {
+  const UPDATED_SCHEMA = {
+    ...TEST_SCHEMA,
+    title: "Updated Form",
+  };
+
+  function putForm(formId: string, body: unknown, apiKey: string = API_KEY) {
+    return SELF.fetch(`http://localhost/api/forms/${formId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("updates schema and html, refreshes title and updated_at", async () => {
+    const { body: createBody } = await createForm();
+    const formId = createBody.id as string;
+
+    const res = await putForm(formId, {
+      schema: UPDATED_SCHEMA,
+      html: "<html><body>v2</body></html>",
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.id).toBe(formId);
+    expect(body.title).toBe("Updated Form");
+    expect(body.url).toBe(`/f/${formId}`);
+
+    const row = await getFormById(env.DB, formId);
+    expect(row!.title).toBe("Updated Form");
+    expect(row!.html).toBe("<html><body>v2</body></html>");
+    expect(JSON.parse(row!.schema_json)).toEqual(UPDATED_SCHEMA);
+  });
+
+  it("updates html only, leaving schema untouched", async () => {
+    const { body: createBody } = await createForm();
+    const formId = createBody.id as string;
+
+    const res = await putForm(formId, { html: "<html><body>v3</body></html>" });
+    expect(res.status).toBe(200);
+
+    const row = await getFormById(env.DB, formId);
+    expect(row!.html).toBe("<html><body>v3</body></html>");
+    expect(JSON.parse(row!.schema_json)).toEqual(TEST_SCHEMA);
+    expect(row!.title).toBe("Test Form");
+  });
+
+  it("returns 400 when neither html nor schema is provided", async () => {
+    const { body: createBody } = await createForm();
+    const res = await putForm(createBody.id as string, {});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for non-object schema", async () => {
+    const { body: createBody } = await createForm();
+    const res = await putForm(createBody.id as string, { schema: [1, 2] });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for nonexistent form", async () => {
+    const res = await putForm("nonexistent1", { html: "<html></html>" });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 with wrong API key", async () => {
+    const { body: createBody } = await createForm(API_KEY);
+    const res = await putForm(createBody.id as string, { html: "<html></html>" }, OTHER_API_KEY);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 401 without auth", async () => {
+    const { body: createBody } = await createForm();
+    const res = await SELF.fetch(`http://localhost/api/forms/${createBody.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html: "<html></html>" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
 // ─── CORS ───
 
 describe("CORS headers", () => {
@@ -283,8 +450,6 @@ describe("CORS headers", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("POST");
-    expect(res.headers.get("Access-Control-Allow-Headers")).toContain(
-      "Content-Type",
-    );
+    expect(res.headers.get("Access-Control-Allow-Headers")).toContain("Content-Type");
   });
 });

@@ -13,6 +13,16 @@ export interface FormRow {
   submit_count: number;
 }
 
+/** Slim projection of FormRow for listings — omits html/schema/api_key_hash. */
+export interface FormSummaryRow {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  view_count: number;
+  submit_count: number;
+}
+
 export interface ResponseRow {
   id: string;
   form_id: string;
@@ -48,6 +58,13 @@ export interface DbAdapter {
     apiKeyHash: string | null;
   }): Promise<FormRow>;
   getFormById(id: string): Promise<FormRow | null>;
+  listFormsByApiKeyHash(apiKeyHash: string): Promise<FormSummaryRow[]>;
+  updateForm(params: {
+    id: string;
+    title?: string | null;
+    html?: string;
+    schemaJson?: string;
+  }): Promise<FormRow | null>;
   incrementViewCount(id: string): Promise<void>;
   incrementViewCountDaily(formId: string): Promise<void>;
   incrementSubmitCount(id: string): Promise<void>;
@@ -71,10 +88,7 @@ export interface DbAdapter {
     formId: string,
     options?: { limit?: number; offset?: number; since?: string; status?: string },
   ): Promise<{ responses: ResponseRow[]; total: number }>;
-  getAllResponsesForExport(
-    formId: string,
-    options?: { status?: string },
-  ): Promise<ResponseRow[]>;
+  getAllResponsesForExport(formId: string, options?: { status?: string }): Promise<ResponseRow[]>;
   getAnalytics(formId: string, days: 7 | 14 | 30): Promise<AnalyticsResult>;
   /** OAuth sessions for Connect Google Sheet (optional; used by connect-sheets route) */
   insertOAuthSession(params: {
@@ -84,9 +98,7 @@ export interface DbAdapter {
     redirectUri: string;
     codeVerifier: string;
   }): Promise<void>;
-  getAndDeleteOAuthSession(
-    state: string,
-  ): Promise<{
+  getAndDeleteOAuthSession(state: string): Promise<{
     formId: string;
     schemaJson: string;
     redirectUri: string;

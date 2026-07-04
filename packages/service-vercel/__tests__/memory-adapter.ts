@@ -5,6 +5,7 @@
 import type {
   DbAdapter,
   FormRow,
+  FormSummaryRow,
   ResponseRow,
   AnalyticsResult,
 } from "@formant/service";
@@ -44,6 +45,36 @@ export class MemoryAdapter implements DbAdapter {
 
   async getFormById(id: string): Promise<FormRow | null> {
     return this.forms.get(id) ?? null;
+  }
+
+  async listFormsByApiKeyHash(apiKeyHash: string): Promise<FormSummaryRow[]> {
+    return [...this.forms.values()]
+      .filter((f) => f.api_key_hash === apiKeyHash)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((f) => ({
+        id: f.id,
+        title: f.title,
+        created_at: f.created_at,
+        updated_at: f.updated_at,
+        view_count: f.view_count,
+        submit_count: f.submit_count,
+      }));
+  }
+
+  async updateForm(params: {
+    id: string;
+    title?: string | null;
+    html?: string;
+    schemaJson?: string;
+  }): Promise<FormRow | null> {
+    const form = this.forms.get(params.id);
+    if (!form) return null;
+    if (params.title !== undefined) form.title = params.title;
+    if (params.html !== undefined) form.html = params.html;
+    if (params.schemaJson !== undefined) form.schema_json = params.schemaJson;
+    form.updated_at = new Date().toISOString();
+    this.forms.set(params.id, form);
+    return form;
   }
 
   async incrementViewCount(id: string): Promise<void> {
@@ -133,10 +164,7 @@ export class MemoryAdapter implements DbAdapter {
     let rows = ids
       .map((id) => this.responses.get(id)!)
       .filter(Boolean)
-      .sort(
-        (a, b) =>
-          new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime(),
-      );
+      .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
 
     const status = options?.status ?? "all";
     if (status !== "all") {
@@ -162,20 +190,14 @@ export class MemoryAdapter implements DbAdapter {
     let rows = ids
       .map((id) => this.responses.get(id)!)
       .filter(Boolean)
-      .sort(
-        (a, b) =>
-          new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime(),
-      );
+      .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
     if (options?.status && options.status !== "all") {
       rows = rows.filter((r) => r.status === options.status);
     }
     return rows;
   }
 
-  async getAnalytics(
-    formId: string,
-    days: 7 | 14 | 30,
-  ): Promise<AnalyticsResult> {
+  async getAnalytics(formId: string, days: 7 | 14 | 30): Promise<AnalyticsResult> {
     const form = this.forms.get(formId);
     if (!form) throw new Error("Form not found");
 
@@ -191,8 +213,7 @@ export class MemoryAdapter implements DbAdapter {
 
     const completed = rows.filter((r) => r.status === "completed");
     const totalStarted = rows.length;
-    const completionRate =
-      totalStarted > 0 ? (completed.length / totalStarted) * 100 : 0;
+    const completionRate = totalStarted > 0 ? (completed.length / totalStarted) * 100 : 0;
 
     let totalDuration = 0;
     let durationCount = 0;
@@ -209,8 +230,7 @@ export class MemoryAdapter implements DbAdapter {
         }
       }
     }
-    const avgDurationSeconds =
-      durationCount > 0 ? totalDuration / durationCount : 0;
+    const avgDurationSeconds = durationCount > 0 ? totalDuration / durationCount : 0;
 
     const series: { date: string; views: number; submissions: number }[] = [];
     for (let i = 0; i < days; i++) {
@@ -218,9 +238,7 @@ export class MemoryAdapter implements DbAdapter {
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().slice(0, 10);
       const views = this.viewsDaily.get(this.dailyKey(formId, dateStr)) ?? 0;
-      const submissions = completed.filter(
-        (r) => r.submitted_at?.slice(0, 10) === dateStr,
-      ).length;
+      const submissions = completed.filter((r) => r.submitted_at?.slice(0, 10) === dateStr).length;
       series.push({ date: dateStr, views, submissions });
     }
 

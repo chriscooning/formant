@@ -1,7 +1,7 @@
 // ─── D1 Adapter ───
 // Implements DbAdapter by wrapping the existing D1 queries.
 
-import type { DbAdapter, FormRow, ResponseRow, AnalyticsResult } from "./interface";
+import type { DbAdapter, FormRow, FormSummaryRow, ResponseRow, AnalyticsResult } from "./interface";
 import * as queries from "./queries";
 
 export class D1Adapter implements DbAdapter {
@@ -19,6 +19,19 @@ export class D1Adapter implements DbAdapter {
 
   async getFormById(id: string): Promise<FormRow | null> {
     return queries.getFormById(this.db, id);
+  }
+
+  async listFormsByApiKeyHash(apiKeyHash: string): Promise<FormSummaryRow[]> {
+    return queries.listFormsByApiKeyHash(this.db, apiKeyHash);
+  }
+
+  async updateForm(params: {
+    id: string;
+    title?: string | null;
+    html?: string;
+    schemaJson?: string;
+  }): Promise<FormRow | null> {
+    return queries.updateForm(this.db, params);
   }
 
   async incrementViewCount(id: string): Promise<void> {
@@ -84,16 +97,11 @@ export class D1Adapter implements DbAdapter {
     formId: string,
     options?: { status?: string },
   ): Promise<ResponseRow[]> {
-    const opts = options
-      ? { status: options.status as "in_progress" | "completed" }
-      : undefined;
+    const opts = options ? { status: options.status as "in_progress" | "completed" } : undefined;
     return queries.getAllResponsesForExport(this.db, formId, opts);
   }
 
-  async getAnalytics(
-    formId: string,
-    days: 7 | 14 | 30,
-  ): Promise<AnalyticsResult> {
+  async getAnalytics(formId: string, days: 7 | 14 | 30): Promise<AnalyticsResult> {
     return queries.getAnalytics(this.db, formId, days);
   }
 
@@ -107,9 +115,7 @@ export class D1Adapter implements DbAdapter {
     return queries.insertOAuthSession(this.db, params);
   }
 
-  async getAndDeleteOAuthSession(
-    state: string,
-  ): Promise<{
+  async getAndDeleteOAuthSession(state: string): Promise<{
     formId: string;
     schemaJson: string;
     redirectUri: string;

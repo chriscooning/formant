@@ -33,7 +33,7 @@ Track which phases are complete. Each agent session should read this first and u
 | 11 | Connect Sheets Admin UI | **complete** |
 | 12 | Seamless Deploy Experience | **complete** |
 
-**Next up:** Phase 5 (deploy dashboard) optional — see `plans/connect-sheets-admin-ui.md`.
+**Next up:** Typeform-like workspace (hosted admin: list/create/edit/publish forms in the browser) — see `plans/typeform-workspace.md`. Phase 5 (deploy dashboard) from `plans/connect-sheets-admin-ui.md` is folded into it (W3/W6).
 
 **Future:** Cloudflare isolated DB mode — `plans/cloudflare-isolated-db-mode.md`. Agent use — `plans/agent-use-improvements.md`.
 

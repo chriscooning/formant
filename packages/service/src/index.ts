@@ -8,7 +8,13 @@ import type { AppEnv } from "./types";
 
 // Re-export types for consumer convenience
 export type { Bindings, Variables, AppEnv } from "./types";
-export type { DbAdapter, FormRow, ResponseRow, AnalyticsResult } from "./db/interface";
+export type {
+  DbAdapter,
+  FormRow,
+  FormSummaryRow,
+  ResponseRow,
+  AnalyticsResult,
+} from "./db/interface";
 export { D1Adapter } from "./db/d1-adapter";
 export { hashApiKey } from "./middleware/auth";
 
