@@ -30,8 +30,8 @@ Reuse the existing API-key scheme (Bearer token, SHA-256 hash stored per form as
 | **W1** | API: list / get / update forms | **complete** |
 | **W2** | Prebuilt renderer runtime artifact + form shell template | **complete** |
 | **W3** | Workspace shell: login, forms list (served at `/admin`) | **complete** |
-| **W4** | Create & edit: schema editor + live preview | pending |
-| **W5** | Publish & share: save, live URL, copy link, embed snippet | pending |
+| **W4** | Create & edit: schema editor + live preview | **complete** |
+| **W5** | Publish & share: save, live URL, copy link | **complete** (embed snippet deferred to W7 polish) |
 | **W6** | Results tab: fold responses-dashboard into the workspace | pending |
 | **W7** | Vercel parity + polish (dark/light, keyboard nav) | pending |
 

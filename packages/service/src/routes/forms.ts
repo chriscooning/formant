@@ -2,10 +2,15 @@ import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { requireAuth } from "../middleware/auth";
 import { generateFormId } from "../utils/id";
+import { assembleHostedFormHTML, withServiceDestination } from "../utils/assemble-form";
 
 const formsApp = new Hono<AppEnv>();
 
 // ─── POST /api/forms — Create a form (auth required) ───
+// Two modes:
+//   { html, schema }  — prebuilt HTML (CLI/deploy scripts; schema stored as-is)
+//   { schema }        — server-side assembly: the service patches in its own
+//                       submit destination and builds the HTML itself
 
 formsApp.post("/api/forms", requireAuth(), async (c) => {
   let body: Record<string, unknown>;
@@ -17,8 +22,8 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
 
   const { html, schema, id: clientId } = body;
 
-  if (!html || typeof html !== "string") {
-    return c.json({ error: "html is required and must be a string" }, 400);
+  if (html !== undefined && typeof html !== "string") {
+    return c.json({ error: "html must be a string" }, 400);
   }
   if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
     return c.json({ error: "schema is required and must be an object" }, 400);
@@ -30,13 +35,26 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
       ? clientId
       : generateFormId();
   const apiKeyHash = c.get("apiKeyHash");
-  const schemaObj = schema as Record<string, unknown>;
+
+  let htmlToStore: string;
+  let schemaToStore: Record<string, unknown>;
+  if (typeof html === "string") {
+    htmlToStore = html;
+    schemaToStore = schema as Record<string, unknown>;
+  } else {
+    schemaToStore = withServiceDestination(schema as Record<string, unknown>, id);
+    try {
+      htmlToStore = assembleHostedFormHTML(schemaToStore);
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : "Invalid schema" }, 400);
+    }
+  }
 
   const form = await c.env.db.insertForm({
     id,
-    title: typeof schemaObj.title === "string" ? schemaObj.title : null,
-    html: html as string,
-    schemaJson: JSON.stringify(schema),
+    title: typeof schemaToStore.title === "string" ? (schemaToStore.title as string) : null,
+    html: htmlToStore,
+    schemaJson: JSON.stringify(schemaToStore),
     apiKeyHash,
   });
 
@@ -136,15 +154,27 @@ formsApp.put("/api/forms/:id", requireAuth(), async (c) => {
     return c.json({ error: "schema must be an object" }, 400);
   }
 
-  const schemaObj = schema as Record<string, unknown> | undefined;
+  // Schema without prebuilt HTML → server-side assembly, so the stored HTML
+  // can never go stale relative to the schema.
+  let schemaObj = schema as Record<string, unknown> | undefined;
+  let htmlToStore = html as string | undefined;
+  if (schemaObj !== undefined && htmlToStore === undefined) {
+    schemaObj = withServiceDestination(schemaObj, id);
+    try {
+      htmlToStore = assembleHostedFormHTML(schemaObj);
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : "Invalid schema" }, 400);
+    }
+  }
+
   const form = await c.env.db.updateForm({
     id,
-    html: html as string | undefined,
-    schemaJson: schema !== undefined ? JSON.stringify(schema) : undefined,
+    html: htmlToStore,
+    schemaJson: schemaObj !== undefined ? JSON.stringify(schemaObj) : undefined,
     title:
       schemaObj !== undefined
         ? typeof schemaObj.title === "string"
-          ? schemaObj.title
+          ? (schemaObj.title as string)
           : null
         : undefined,
   });

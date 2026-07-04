@@ -127,6 +127,9 @@ importers:
       '@formant/core':
         specifier: workspace:*
         version: link:../core
+      '@formant/html-builder':
+        specifier: workspace:*
+        version: link:../html-builder
       hono:
         specifier: latest
         version: 4.11.9

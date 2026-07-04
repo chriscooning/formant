@@ -195,6 +195,7 @@ switch (command) {
   case "build-runtime": {
     const runtimeArgs = args.slice(1);
     let output: string | null = null;
+    let embed: string | null = null;
     let minify = true;
     for (let i = 0; i < runtimeArgs.length; i++) {
       const arg = runtimeArgs[i]!;
@@ -204,26 +205,47 @@ switch (command) {
           console.error("Error: -o/--output requires a file path argument");
           process.exit(1);
         }
+      } else if (arg === "--embed") {
+        embed = runtimeArgs[++i] ?? null;
+        if (!embed) {
+          console.error("Error: --embed requires a .ts file path argument");
+          process.exit(1);
+        }
       } else if (arg === "--no-minify") {
         minify = false;
       }
     }
 
-    const outPath = output
-      ? path.resolve(output)
-      : path.resolve(__dirname, "../dist/formant-runtime.js");
-
     console.log("Bundling schema-independent runtime...");
     const runtimeJs = buildRuntimeJS({ minify });
 
-    const outDir = path.dirname(outPath);
-    if (!fs.existsSync(outDir)) {
-      fs.mkdirSync(outDir, { recursive: true });
-    }
-    fs.writeFileSync(outPath, runtimeJs);
+    const writeOut = (outPath: string, contents: string) => {
+      const outDir = path.dirname(outPath);
+      if (!fs.existsSync(outDir)) {
+        fs.mkdirSync(outDir, { recursive: true });
+      }
+      fs.writeFileSync(outPath, contents);
+      const sizeKB = (Buffer.byteLength(contents) / 1024).toFixed(1);
+      console.log(`Done — ${sizeKB} KB written to ${outPath}`);
+    };
 
-    const sizeKB = (Buffer.byteLength(runtimeJs) / 1024).toFixed(1);
-    console.log(`Done — ${sizeKB} KB written to ${outPath}`);
+    if (embed) {
+      // Emit a TS module so the runtime can be bundled into Workers
+      // (JSON.stringify escapes everything a template literal would trip on)
+      const moduleSrc =
+        "// GENERATED FILE — do not edit.\n" +
+        "// Regenerate with: pnpm build:runtime:embed\n" +
+        "// Schema-independent Formant renderer runtime (packages/html-builder).\n\n" +
+        "export const RUNTIME_JS: string =\n  " +
+        JSON.stringify(runtimeJs) +
+        ";\n";
+      writeOut(path.resolve(embed), moduleSrc);
+    } else {
+      const outPath = output
+        ? path.resolve(output)
+        : path.resolve(__dirname, "../dist/formant-runtime.js");
+      writeOut(outPath, runtimeJs);
+    }
     break;
   }
 

@@ -8,6 +8,7 @@
     "test:e2e": "pnpm --filter e2e test",
     "formant": "tsx packages/html-builder/src/cli.ts",
     "build:runtime": "tsx packages/html-builder/src/cli.ts build-runtime",
+    "build:runtime:embed": "tsx packages/html-builder/src/cli.ts build-runtime --embed packages/service/src/generated/runtime-embed.ts",
     "deploy": "tsx packages/html-builder/src/cli.ts deploy",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write ."

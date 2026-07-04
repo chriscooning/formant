@@ -80,7 +80,7 @@ describe("POST /api/forms", () => {
     expect(body.error).toBeDefined();
   });
 
-  it("returns 400 for missing html", async () => {
+  it("assembles HTML server-side when only a schema is sent", async () => {
     const res = await SELF.fetch("http://localhost/api/forms", {
       method: "POST",
       headers: {
@@ -90,7 +90,45 @@ describe("POST /api/forms", () => {
       body: JSON.stringify({ schema: TEST_SCHEMA }),
     });
 
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as Record<string, unknown>;
+    const formId = body.id as string;
+
+    // Stored HTML is a real assembled form
+    const row = await getFormById(env.DB, formId);
+    expect(row!.html).toContain("<!DOCTYPE html>");
+    expect(row!.html).toContain("var __FORMANT_SCHEMA__");
+    expect(row!.html).toContain("<title>Test Form</title>");
+
+    // Stored schema gained a service destination pointing at this form
+    const storedSchema = JSON.parse(row!.schema_json) as {
+      submit: { destinations: { type: string; formId?: string }[] };
+    };
+    const service = storedSchema.submit.destinations.find((d) => d.type === "service");
+    expect(service).toBeDefined();
+    expect(service!.formId).toBe(formId);
+    // Original destinations are preserved
+    expect(storedSchema.submit.destinations.some((d) => d.type === "excel")).toBe(true);
+
+    // And the public route serves it
+    const page = await SELF.fetch(`http://localhost/f/${formId}`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("var __FORMANT_SCHEMA__");
+  });
+
+  it("returns 400 for schema-only create with an invalid schema", async () => {
+    const res = await SELF.fetch("http://localhost/api/forms", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({ schema: { id: "bad", title: "No fields" } }),
+    });
+
     expect(res.status).toBe(400);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(String(body.error)).toContain("Invalid schema");
   });
 
   it("returns 400 for missing schema", async () => {
@@ -392,6 +430,33 @@ describe("PUT /api/forms/:id", () => {
     expect(row!.html).toBe("<html><body>v3</body></html>");
     expect(JSON.parse(row!.schema_json)).toEqual(TEST_SCHEMA);
     expect(row!.title).toBe("Test Form");
+  });
+
+  it("reassembles html server-side when only a schema is sent", async () => {
+    const { body: createBody } = await createForm();
+    const formId = createBody.id as string;
+
+    const res = await putForm(formId, { schema: UPDATED_SCHEMA });
+    expect(res.status).toBe(200);
+
+    const row = await getFormById(env.DB, formId);
+    expect(row!.title).toBe("Updated Form");
+    expect(row!.html).toContain("<!DOCTYPE html>");
+    expect(row!.html).toContain("<title>Updated Form</title>");
+
+    const storedSchema = JSON.parse(row!.schema_json) as {
+      submit: { destinations: { type: string; formId?: string }[] };
+    };
+    const service = storedSchema.submit.destinations.find((d) => d.type === "service");
+    expect(service!.formId).toBe(formId);
+  });
+
+  it("returns 400 for schema-only update with an invalid schema", async () => {
+    const { body: createBody } = await createForm();
+    const res = await putForm(createBody.id as string, {
+      schema: { id: "bad", title: "No fields" },
+    });
+    expect(res.status).toBe(400);
   });
 
   it("returns 400 when neither html nor schema is provided", async () => {

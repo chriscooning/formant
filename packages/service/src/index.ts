@@ -5,6 +5,7 @@ import { responsesApp } from "./routes/responses";
 import { exportApp } from "./routes/export";
 import { connectSheetsApp } from "./routes/connect-sheets";
 import { adminApp } from "./routes/admin";
+import { previewApp } from "./routes/preview";
 import type { AppEnv } from "./types";
 
 // Re-export types for consumer convenience
@@ -35,5 +36,6 @@ app.route("/", responsesApp);
 app.route("/", exportApp);
 app.route("/", connectSheetsApp);
 app.route("/", adminApp);
+app.route("/", previewApp);
 
 export default app;

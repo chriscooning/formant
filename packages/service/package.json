@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@formant/core": "workspace:*",
+    "@formant/html-builder": "workspace:*",
     "hono": "latest",
     "nanoid": "latest",
     "xlsx": "latest"

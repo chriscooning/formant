@@ -169,7 +169,7 @@ describe("POST /api/forms", () => {
     expect(body.error).toBeDefined();
   });
 
-  it("returns 400 for missing html", async () => {
+  it("assembles HTML server-side when only a schema is sent", async () => {
     const res = await fetchApp(
       "http://localhost/api/forms",
       {
@@ -183,7 +183,17 @@ describe("POST /api/forms", () => {
       db,
     );
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as Record<string, unknown>;
+    const stored = await db.getFormById(body.id as string);
+    expect(stored!.html).toContain("<!DOCTYPE html>");
+    expect(stored!.html).toContain("var __FORMANT_SCHEMA__");
+    const storedSchema = JSON.parse(stored!.schema_json) as {
+      submit: { destinations: { type: string; formId?: string }[] };
+    };
+    expect(storedSchema.submit.destinations.find((d) => d.type === "service")?.formId).toBe(
+      body.id,
+    );
   });
 
   it("returns 400 for missing schema", async () => {
@@ -204,13 +214,7 @@ describe("POST /api/forms", () => {
   });
 
   it("accepts client-provided id when valid", async () => {
-    const { res, body } = await createForm(
-      db,
-      API_KEY,
-      TEST_SCHEMA,
-      TEST_HTML,
-      "my-form-1234",
-    );
+    const { res, body } = await createForm(db, API_KEY, TEST_SCHEMA, TEST_HTML, "my-form-1234");
 
     expect(res.status).toBe(201);
     expect(body.id).toBe("my-form-1234");
@@ -264,9 +268,7 @@ describe("GET /f/:id", () => {
 
     const res = await fetchApp(`http://localhost/f/${formId}`, {}, db);
 
-    expect(res.headers.get("Cache-Control")).toContain(
-      "stale-while-revalidate",
-    );
+    expect(res.headers.get("Cache-Control")).toContain("stale-while-revalidate");
   });
 
   it("increments view count", async () => {
@@ -554,11 +556,7 @@ describe("GET /api/responses/:formId", () => {
   it("returns 401 without auth", async () => {
     const { body: form } = await createForm(db);
 
-    const res = await fetchApp(
-      `http://localhost/api/responses/${form.id}`,
-      {},
-      db,
-    );
+    const res = await fetchApp(`http://localhost/api/responses/${form.id}`, {}, db);
 
     expect(res.status).toBe(401);
   });
@@ -597,14 +595,24 @@ describe("GET /api/responses/:formId/analytics", () => {
 
   it("returns analytics with totals, series, and highestDropoff", async () => {
     const { body: form } = await createForm(db);
-    await submitResponse(db, form.id as string, { name: "Alice", rating: 5 }, {
-      userAgent: "test",
-      duration: 120,
-    });
-    await submitResponse(db, form.id as string, { name: "Bob", rating: 4 }, {
-      userAgent: "test",
-      duration: 90,
-    });
+    await submitResponse(
+      db,
+      form.id as string,
+      { name: "Alice", rating: 5 },
+      {
+        userAgent: "test",
+        duration: 120,
+      },
+    );
+    await submitResponse(
+      db,
+      form.id as string,
+      { name: "Bob", rating: 4 },
+      {
+        userAgent: "test",
+        duration: 90,
+      },
+    );
 
     const res = await fetchApp(
       `http://localhost/api/responses/${form.id}/analytics?days=7`,
@@ -738,11 +746,7 @@ describe("GET /api/responses/:formId/xlsx", () => {
   it("returns 401 without auth", async () => {
     const { body: form } = await createForm(db);
 
-    const res = await fetchApp(
-      `http://localhost/api/responses/${form.id}/xlsx`,
-      {},
-      db,
-    );
+    const res = await fetchApp(`http://localhost/api/responses/${form.id}/xlsx`, {}, db);
 
     expect(res.status).toBe(401);
   });
@@ -836,11 +840,7 @@ describe("GET /api/responses/:formId/csv", () => {
   it("returns 401 without auth", async () => {
     const { body: form } = await createForm(db);
 
-    const res = await fetchApp(
-      `http://localhost/api/responses/${form.id}/csv`,
-      {},
-      db,
-    );
+    const res = await fetchApp(`http://localhost/api/responses/${form.id}/csv`, {}, db);
 
     expect(res.status).toBe(401);
   });
@@ -915,11 +915,7 @@ describe("DELETE /api/forms/:id", () => {
     const { body: createBody } = await createForm(db);
     const formId = createBody.id as string;
 
-    const res = await fetchApp(
-      `http://localhost/api/forms/${formId}`,
-      { method: "DELETE" },
-      db,
-    );
+    const res = await fetchApp(`http://localhost/api/forms/${formId}`, { method: "DELETE" }, db);
 
     expect(res.status).toBe(401);
   });
@@ -990,8 +986,6 @@ describe("CORS headers", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("POST");
-    expect(res.headers.get("Access-Control-Allow-Headers")).toContain(
-      "Content-Type",
-    );
+    expect(res.headers.get("Access-Control-Allow-Headers")).toContain("Content-Type");
   });
 });
