@@ -4,8 +4,31 @@ import { requireAuth } from "../middleware/auth";
 import { generateFormId } from "../utils/id";
 import { assembleHostedFormHTML, withServiceDestination } from "../utils/assemble-form";
 import { qrSvg } from "../utils/qr-svg";
+import type { FormStatus } from "../db/interface";
 
 const formsApp = new Hono<AppEnv>();
+
+const FORM_STATUSES: FormStatus[] = ["draft", "published", "closed"];
+
+function parseStatus(value: unknown): FormStatus | null | undefined {
+  if (value === undefined) return undefined;
+  return FORM_STATUSES.includes(value as FormStatus) ? (value as FormStatus) : null;
+}
+
+/** Minimal self-contained page served in place of a closed form. */
+function closedFormHTML(title: string | null): string {
+  const safe = (title ?? "This form").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${safe}</title>
+<style>
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0a0a0c; color:#e0e0e0; text-align:center; padding:24px; }
+  @media (prefers-color-scheme: light) { body { background:#fafafa; color:#1a1a1a; } }
+  h1 { font-size:22px; margin:0 0 10px; } p { color:#888; font-size:15px; margin:0; }
+</style></head>
+<body><div><h1>${safe} is closed</h1><p>This form is no longer accepting responses.</p></div></body></html>`;
+}
 
 // ─── POST /api/forms — Create a form (auth required) ───
 // Two modes:
@@ -25,6 +48,10 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
 
   if (html !== undefined && typeof html !== "string") {
     return c.json({ error: "html must be a string" }, 400);
+  }
+  const createStatus = parseStatus(body.status);
+  if (createStatus === null) {
+    return c.json({ error: "status must be draft, published, or closed" }, 400);
   }
   if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
     return c.json({ error: "schema is required and must be an object" }, 400);
@@ -57,12 +84,14 @@ formsApp.post("/api/forms", requireAuth(), async (c) => {
     html: htmlToStore,
     schemaJson: JSON.stringify(schemaToStore),
     apiKeyHash,
+    status: createStatus,
   });
 
   return c.json(
     {
       id: form.id,
       url: `/f/${form.id}`,
+      status: form.status,
       created_at: form.created_at,
     },
     201,
@@ -79,6 +108,7 @@ formsApp.get("/api/forms", requireAuth(), async (c) => {
       id: f.id,
       title: f.title,
       url: `/f/${f.id}`,
+      status: f.status,
       created_at: f.created_at,
       updated_at: f.updated_at,
       view_count: f.view_count,
@@ -112,6 +142,7 @@ formsApp.get("/api/forms/:id", requireAuth(), async (c) => {
     id: form.id,
     title: form.title,
     url: `/f/${form.id}`,
+    status: form.status,
     schema,
     created_at: form.created_at,
     updated_at: form.updated_at,
@@ -164,8 +195,12 @@ formsApp.put("/api/forms/:id", requireAuth(), async (c) => {
   }
 
   const { html, schema } = body;
-  if (html === undefined && schema === undefined) {
-    return c.json({ error: "Provide html and/or schema to update" }, 400);
+  const putStatus = parseStatus(body.status);
+  if (putStatus === null) {
+    return c.json({ error: "status must be draft, published, or closed" }, 400);
+  }
+  if (html === undefined && schema === undefined && putStatus === undefined) {
+    return c.json({ error: "Provide html, schema, and/or status to update" }, 400);
   }
   if (html !== undefined && typeof html !== "string") {
     return c.json({ error: "html must be a string" }, 400);
@@ -194,6 +229,7 @@ formsApp.put("/api/forms/:id", requireAuth(), async (c) => {
     id,
     html: htmlToStore,
     schemaJson: schemaObj !== undefined ? JSON.stringify(schemaObj) : undefined,
+    status: putStatus,
     title:
       schemaObj !== undefined
         ? typeof schemaObj.title === "string"
@@ -210,6 +246,7 @@ formsApp.put("/api/forms/:id", requireAuth(), async (c) => {
     id: form.id,
     title: form.title,
     url: `/f/${form.id}`,
+    status: form.status,
     updated_at: form.updated_at,
   });
 });
@@ -220,8 +257,12 @@ formsApp.get("/f/:id", async (c) => {
   const id = c.req.param("id");
   const form = await c.env.db.getFormById(id);
 
-  if (!form) {
+  if (!form || form.status === "draft") {
     return c.text("Form not found", 404);
+  }
+
+  if (form.status === "closed") {
+    return c.html(closedFormHTML(form.title), 200, { "Cache-Control": "no-store" });
   }
 
   // Increment view count (total + daily) without blocking the response

@@ -1,7 +1,14 @@
 // ─── D1 Adapter ───
 // Implements DbAdapter by wrapping the existing D1 queries.
 
-import type { DbAdapter, FormRow, FormSummaryRow, ResponseRow, AnalyticsResult } from "./interface";
+import type {
+  DbAdapter,
+  FormRow,
+  FormStatus,
+  FormSummaryRow,
+  ResponseRow,
+  AnalyticsResult,
+} from "./interface";
 import * as queries from "./queries";
 
 export class D1Adapter implements DbAdapter {
@@ -13,6 +20,7 @@ export class D1Adapter implements DbAdapter {
     html: string;
     schemaJson: string;
     apiKeyHash: string | null;
+    status?: FormStatus;
   }): Promise<FormRow> {
     return queries.insertForm(this.db, params);
   }
@@ -30,6 +38,7 @@ export class D1Adapter implements DbAdapter {
     title?: string | null;
     html?: string;
     schemaJson?: string;
+    status?: FormStatus;
   }): Promise<FormRow | null> {
     return queries.updateForm(this.db, params);
   }

@@ -5,6 +5,7 @@ import { sql } from "@vercel/postgres";
 import type {
   DbAdapter,
   FormRow,
+  FormStatus,
   FormSummaryRow,
   ResponseRow,
   AnalyticsResult,
@@ -21,6 +22,7 @@ function rowToFormRow(r: Record<string, unknown>): FormRow {
     updated_at: String(r.updated_at),
     view_count: Number(r.view_count) || 0,
     submit_count: Number(r.submit_count) || 0,
+    status: (r.status as FormStatus) ?? "published",
   };
 }
 
@@ -44,10 +46,11 @@ export class PostgresAdapter implements DbAdapter {
     html: string;
     schemaJson: string;
     apiKeyHash: string | null;
+    status?: FormStatus;
   }): Promise<FormRow> {
     await sql`
-      INSERT INTO forms (id, title, html, schema_json, api_key_hash)
-      VALUES (${params.id}, ${params.title}, ${params.html}, ${params.schemaJson}, ${params.apiKeyHash})
+      INSERT INTO forms (id, title, html, schema_json, api_key_hash, status)
+      VALUES (${params.id}, ${params.title}, ${params.html}, ${params.schemaJson}, ${params.apiKeyHash}, ${params.status ?? "published"})
     `;
     const { rows } = await sql`SELECT * FROM forms WHERE id = ${params.id}`;
     const r = rows[0];
@@ -64,7 +67,7 @@ export class PostgresAdapter implements DbAdapter {
 
   async listFormsByApiKeyHash(apiKeyHash: string): Promise<FormSummaryRow[]> {
     const { rows } = await sql`
-      SELECT id, title, created_at, updated_at, view_count, submit_count
+      SELECT id, title, created_at, updated_at, view_count, submit_count, status
       FROM forms WHERE api_key_hash = ${apiKeyHash} ORDER BY created_at DESC
     `;
     return rows.map((r) => ({
@@ -74,6 +77,7 @@ export class PostgresAdapter implements DbAdapter {
       updated_at: String(r.updated_at),
       view_count: Number(r.view_count) || 0,
       submit_count: Number(r.submit_count) || 0,
+      status: (r.status as FormStatus) ?? "published",
     }));
   }
 
@@ -82,17 +86,20 @@ export class PostgresAdapter implements DbAdapter {
     title?: string | null;
     html?: string;
     schemaJson?: string;
+    status?: FormStatus;
   }): Promise<FormRow | null> {
     if (
       params.title !== undefined ||
       params.html !== undefined ||
-      params.schemaJson !== undefined
+      params.schemaJson !== undefined ||
+      params.status !== undefined
     ) {
       await sql`
         UPDATE forms SET
           title = CASE WHEN ${params.title !== undefined} THEN ${params.title ?? null} ELSE title END,
           html = COALESCE(${params.html ?? null}, html),
           schema_json = COALESCE(${params.schemaJson ?? null}, schema_json),
+          status = COALESCE(${params.status ?? null}, status),
           updated_at = NOW()
         WHERE id = ${params.id}
       `;

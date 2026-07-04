@@ -94,18 +94,71 @@ describe("POST /api/generate", () => {
     expect(res.status).toBe(503);
   });
 
-  it("returns a validated schema from the model output", async () => {
-    globalThis.fetch = async () => anthropicResponse(JSON.stringify(VALID_SCHEMA));
+  it("returns a validated schema plus a conversational reply", async () => {
+    globalThis.fetch = async () =>
+      anthropicResponse(
+        JSON.stringify({
+          reply: "Here you go — want an email question too?",
+          schema: VALID_SCHEMA,
+        }),
+      );
 
     const res = await generateRequest({ ANTHROPIC_API_KEY: "sk-test" });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { schema: typeof VALID_SCHEMA };
+    const body = (await res.json()) as { schema: typeof VALID_SCHEMA; message: string };
     expect(body.schema).toEqual(VALID_SCHEMA);
+    expect(body.message).toContain("want an email question");
+  });
+
+  it("passes a clarifying question through when schema is null", async () => {
+    globalThis.fetch = async () =>
+      anthropicResponse(
+        JSON.stringify({ reply: "Who is this form for — customers or employees?", schema: null }),
+      );
+
+    const res = await generateRequest({ ANTHROPIC_API_KEY: "sk-test" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { schema: unknown; message: string };
+    expect(body.schema).toBeNull();
+    expect(body.message).toContain("customers or employees");
+  });
+
+  it("injects current schema and focused field into the last user turn", async () => {
+    let sent = "";
+    globalThis.fetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      sent = String(init?.body);
+      return anthropicResponse(JSON.stringify({ reply: "Done.", schema: VALID_SCHEMA }));
+    };
+
+    const res = await app.fetch(
+      new Request("http://localhost/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+        body: JSON.stringify({
+          messages: [
+            { role: "user", content: "make a feedback form" },
+            { role: "assistant", content: "Here it is." },
+            { role: "user", content: "make the rating question funnier" },
+          ],
+          schema: VALID_SCHEMA,
+          field_id: "rating",
+        }),
+      }),
+      { db: null as unknown as DbAdapter, ANTHROPIC_API_KEY: "sk-test" },
+      executionCtx,
+    );
+    expect(res.status).toBe(200);
+    expect(sent).toContain("Current schema:");
+    expect(sent).toContain("Focused field:");
+    expect(sent).toContain("the user is editing this question");
+    expect(sent).toContain("make the rating question funnier");
   });
 
   it("tolerates markdown fences around the JSON", async () => {
     globalThis.fetch = async () =>
-      anthropicResponse("```json\n" + JSON.stringify(VALID_SCHEMA) + "\n```");
+      anthropicResponse(
+        "```json\n" + JSON.stringify({ reply: "ok", schema: VALID_SCHEMA }) + "\n```",
+      );
 
     const res = await generateRequest({ ANTHROPIC_API_KEY: "sk-test" });
     expect(res.status).toBe(200);
@@ -119,9 +172,9 @@ describe("POST /api/generate", () => {
       // Second call must carry the validation errors back to the model
       if (calls === 2) {
         expect(String(init?.body)).toContain("failed validation");
-        return anthropicResponse(JSON.stringify(VALID_SCHEMA));
+        return anthropicResponse(JSON.stringify({ reply: "fixed", schema: VALID_SCHEMA }));
       }
-      return anthropicResponse(JSON.stringify(invalid));
+      return anthropicResponse(JSON.stringify({ reply: "try", schema: invalid }));
     };
 
     const res = await generateRequest({ ANTHROPIC_API_KEY: "sk-test" });
@@ -131,7 +184,8 @@ describe("POST /api/generate", () => {
 
   it("returns 422 when the model cannot produce a valid schema", async () => {
     const invalid = { id: "bad", title: "No fields", fields: [] };
-    globalThis.fetch = async () => anthropicResponse(JSON.stringify(invalid));
+    globalThis.fetch = async () =>
+      anthropicResponse(JSON.stringify({ reply: "hm", schema: invalid }));
 
     const res = await generateRequest({ ANTHROPIC_API_KEY: "sk-test" });
     expect(res.status).toBe(422);

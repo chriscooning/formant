@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS forms (
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
   view_count INTEGER DEFAULT 0,
-  submit_count INTEGER DEFAULT 0
+  submit_count INTEGER DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'published'  -- 'draft' | 'published' | 'closed'
 );
 
 -- Responses table: stores individual form submissions

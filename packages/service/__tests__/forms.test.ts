@@ -532,6 +532,123 @@ describe("PUT /api/forms/:id", () => {
   });
 });
 
+// ─── Form lifecycle: draft / published / closed ───
+
+describe("form status lifecycle", () => {
+  function createWithStatus(status?: string) {
+    const body: Record<string, unknown> = { schema: TEST_SCHEMA };
+    if (status) body.status = status;
+    return SELF.fetch("http://localhost/api/forms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+      body: JSON.stringify(body),
+    });
+  }
+  function setStatus(id: string, status: string) {
+    return SELF.fetch(`http://localhost/api/forms/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  it("defaults to published (CLI compatibility)", async () => {
+    const res = await createWithStatus();
+    const body = (await res.json()) as { status: string };
+    expect(body.status).toBe("published");
+  });
+
+  it("saves a draft: not publicly served, not accepting responses", async () => {
+    const res = await createWithStatus("draft");
+    expect(res.status).toBe(201);
+    const { id, status } = (await res.json()) as { id: string; status: string };
+    expect(status).toBe("draft");
+
+    const page = await SELF.fetch(`http://localhost/f/${id}`);
+    expect(page.status).toBe(404);
+
+    const submit = await SELF.fetch(`http://localhost/api/responses/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers: { name: "x" } }),
+    });
+    expect(submit.status).toBe(404);
+  });
+
+  it("publishes a draft via status-only PUT", async () => {
+    const created = (await (await createWithStatus("draft")).json()) as { id: string };
+    const res = await setStatus(created.id, "published");
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { status: string }).status).toBe("published");
+
+    const page = await SELF.fetch(`http://localhost/f/${created.id}`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("__FORMANT_SCHEMA__");
+  });
+
+  it("unpublishes back to draft", async () => {
+    const created = (await (await createWithStatus("published")).json()) as { id: string };
+    await setStatus(created.id, "draft");
+    const page = await SELF.fetch(`http://localhost/f/${created.id}`);
+    expect(page.status).toBe(404);
+  });
+
+  it("closed forms serve a closed notice and reject responses", async () => {
+    const created = (await (await createWithStatus("published")).json()) as { id: string };
+    await setStatus(created.id, "closed");
+
+    const page = await SELF.fetch(`http://localhost/f/${created.id}`);
+    expect(page.status).toBe(200);
+    const html = await page.text();
+    expect(html).toContain("no longer accepting responses");
+    expect(html).not.toContain("__FORMANT_SCHEMA__");
+
+    const submit = await SELF.fetch(`http://localhost/api/responses/${created.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers: { name: "x" } }),
+    });
+    expect(submit.status).toBe(403);
+    expect(((await submit.json()) as { error: string }).error).toContain("no longer accepting");
+  });
+
+  it("reopening a closed form accepts responses again", async () => {
+    const created = (await (await createWithStatus("closed")).json()) as { id: string };
+    await setStatus(created.id, "published");
+    const submit = await SELF.fetch(`http://localhost/api/responses/${created.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers: { name: "x" }, status: "completed" }),
+    });
+    expect(submit.status).toBe(201);
+  });
+
+  it("rejects an invalid status", async () => {
+    const res = await createWithStatus("archived");
+    expect(res.status).toBe(400);
+    const created = (await (await createWithStatus("draft")).json()) as { id: string };
+    const put = await setStatus(created.id, "bogus");
+    expect(put.status).toBe(400);
+  });
+
+  it("owner list and detail include status", async () => {
+    const created = (await (await createWithStatus("draft")).json()) as { id: string };
+    const list = (await (
+      await SELF.fetch("http://localhost/api/forms", {
+        headers: { Authorization: `Bearer ${API_KEY}` },
+      })
+    ).json()) as { forms: { id: string; status: string }[] };
+    expect(list.forms.find((f) => f.id === created.id)?.status).toBe("draft");
+
+    const detail = (await (
+      await SELF.fetch(`http://localhost/api/forms/${created.id}`, {
+        headers: { Authorization: `Bearer ${API_KEY}` },
+      })
+    ).json()) as { status: string };
+    expect(detail.status).toBe("draft");
+  });
+});
+
 // ─── CORS ───
 
 describe("CORS headers", () => {

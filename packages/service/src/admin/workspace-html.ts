@@ -780,6 +780,104 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       .form-card { flex-direction: column; align-items: flex-start; }
       .form-actions { width: 100%; flex-wrap: wrap; }
     }
+    /* ── AI chat panel ── */
+    .ai-panel { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; }
+    .ai-note {
+      background: var(--ff-accent-soft);
+      border: 1px solid var(--ff-border);
+      border-radius: var(--ff-radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+    .ai-note h3 { font-size: 13.5px; font-weight: 650; margin: 0 0 4px; }
+    .ai-note p { color: var(--ff-text-secondary); margin: 4px 0 0; }
+    .ai-note code {
+      font-family: var(--ff-font-mono);
+      font-size: 11.5px;
+      background: var(--ff-bg);
+      border: 1px solid var(--ff-border);
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+    .ai-context {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--ff-accent-soft);
+      border-radius: 999px;
+      color: var(--ff-accent-strong);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 6px 4px 12px;
+      align-self: flex-start;
+      max-width: 100%;
+    }
+    .ai-context span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ai-messages {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 2px;
+    }
+    .ai-msg {
+      max-width: 90%;
+      border-radius: var(--ff-radius);
+      padding: 9px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .ai-msg.user {
+      align-self: flex-end;
+      background: var(--ff-accent);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+    .ai-msg.assistant {
+      align-self: flex-start;
+      background: var(--ff-surface-hover);
+      border: 1px solid var(--ff-border);
+      border-bottom-left-radius: 4px;
+    }
+    .ai-msg.typing { color: var(--ff-text-secondary); font-style: italic; }
+    .ai-empty { color: var(--ff-text-secondary); font-size: 13px; padding: 8px 2px; line-height: 1.6; }
+    .ai-input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .ai-input-row textarea {
+      flex: 1;
+      background: var(--ff-bg);
+      border: 1px solid var(--ff-border);
+      border-radius: var(--ff-radius-sm);
+      font-size: 13px;
+      padding: 9px 11px;
+      outline: none;
+      resize: none;
+      transition: border-color var(--ff-transition), box-shadow var(--ff-transition);
+    }
+    .ai-input-row textarea:focus { border-color: var(--ff-accent); box-shadow: 0 0 0 3px var(--ff-accent-soft); }
+
+    /* ── Form status ── */
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .status-dot.published { background: var(--ff-success); }
+    .status-dot.draft { background: var(--ff-text-muted); }
+    .status-dot.closed { background: var(--ff-error); }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      border-radius: 999px;
+      padding: 2.5px 9px;
+      border: 1px solid var(--ff-border);
+      color: var(--ff-text-secondary);
+      background: var(--ff-surface-hover);
+      vertical-align: 2px;
+      margin-left: 8px;
+    }
   </style>
 </head>
 <body>
@@ -824,23 +922,6 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           <button type="button" data-template="nps">NPS survey<span class="menu-hint">0–10 scale + follow-up</span></button>
           <button type="button" data-template="json">Paste JSON<span class="menu-hint">Use an AI-generated schema</span></button>
         </div>
-        <div id="ai-pane" class="menu hidden" style="top: 48px; right: 0; width: 360px; padding: 14px;">
-          <div id="ai-form">
-            <div class="prop-row">
-              <label for="ai-desc">Describe your form</label>
-              <textarea id="ai-desc" rows="3" spellcheck="false" placeholder="An RSVP form for a June wedding — attendance, meal choice, song request"></textarea>
-            </div>
-            <div id="ai-error" class="json-error"></div>
-            <button id="ai-generate" class="btn-primary" type="button" style="width: 100%; margin-top: 6px;">Generate form</button>
-          </div>
-          <div id="ai-unconfigured" class="hidden">
-            <div class="sheets-text">
-              <h3>Create with AI isn't set up yet</h3>
-              <p style="margin-top: 6px;">Give the backend an Anthropic API key, then reload:</p>
-              <p style="margin-top: 8px;"><code style="font-family: var(--ff-font-mono); font-size: 11.5px; background: var(--ff-bg); border: 1px solid var(--ff-border); border-radius: 4px; padding: 2px 6px;">wrangler secret put ANTHROPIC_API_KEY</code></p>
-            </div>
-          </div>
-        </div>
       </div>
       <div id="list-status" class="status-line hidden"></div>
       <ul id="form-list" class="form-list"></ul>
@@ -858,12 +939,18 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       <button id="editor-back" class="btn-ghost" type="button">←</button>
       <input id="editor-title" class="editor-title-input" type="text" placeholder="Untitled form" spellcheck="false">
       <span id="editor-status" class="editor-status"></span>
+      <div style="position: relative; display: inline-flex;">
+        <button id="status-chip-btn" class="btn-ghost hidden" type="button"><span id="status-chip-dot" class="status-dot"></span><span id="status-chip-label"></span><span style="opacity:.6;">▾</span></button>
+        <div id="status-menu" class="menu hidden" style="top: 40px; right: 0; min-width: 190px;"></div>
+      </div>
       <button id="editor-results" class="btn-ghost hidden" type="button">Results</button>
+      <button id="ai-toggle" class="btn-ghost" type="button">✨ AI</button>
       <button id="json-toggle" class="btn-ghost" type="button">JSON</button>
+      <button id="save-draft-btn" class="btn-ghost" type="button">Save draft</button>
       <button id="publish-btn" class="btn-primary" type="button">Publish</button>
     </div>
     <div id="share-bar" class="share-bar hidden">
-      <span>Live at</span>
+      <span id="share-live-label">Live at</span>
       <span id="share-url" class="share-url"></span>
       <button id="share-copy" class="btn-ghost" type="button">Copy link</button>
       <a id="share-open" class="btn-ghost" target="_blank" rel="noopener">Open</a>
@@ -898,6 +985,22 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           <textarea id="json-text" spellcheck="false" placeholder="Paste your form schema JSON here…"></textarea>
           <div id="json-error" class="json-error"></div>
           <button id="json-apply" class="btn-primary" type="button">Apply</button>
+        </div>
+        <div id="ai-panel" class="ai-panel hidden">
+          <div id="ai-unconfigured" class="ai-note hidden">
+            <h3>Create with AI isn't set up yet</h3>
+            <p>Give the backend an Anthropic API key, then reload:</p>
+            <p><code>wrangler secret put ANTHROPIC_API_KEY</code></p>
+          </div>
+          <div id="ai-context" class="ai-context hidden">
+            <span id="ai-context-label"></span>
+            <button id="ai-context-clear" class="icon-btn" type="button" title="Back to the whole form">×</button>
+          </div>
+          <div id="ai-messages" class="ai-messages"></div>
+          <div id="ai-input-row" class="ai-input-row">
+            <textarea id="ai-chat-input" rows="2" spellcheck="false" placeholder="Describe your form, or ask for a change…"></textarea>
+            <button id="ai-send" class="btn-primary" type="button">Send</button>
+          </div>
         </div>
       </div>
       <div class="editor-preview">
@@ -1144,24 +1247,97 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       formId: null,
       schema: null,
       expanded: -1,
-      jsonMode: false,
+      panelMode: "fields",
+      status: null,
       publishedUrl: null,
       previewTimer: null
     };
 
     function setEditorStatus(text) { $("editor-status").textContent = text || ""; }
 
-    function openEditor(formId, schema, startInJsonMode) {
+    var STATUS_LABELS = { draft: "Draft", published: "Live", closed: "Closed" };
+    var STATUS_ACTIONS = {
+      draft: [{ to: "published", label: "Publish" }],
+      published: [
+        { to: "closed", label: "Close responses", hint: "Keep the page up, stop accepting answers" },
+        { to: "draft", label: "Unpublish", hint: "Take the form offline" }
+      ],
+      closed: [
+        { to: "published", label: "Reopen responses" },
+        { to: "draft", label: "Unpublish", hint: "Take the form offline" }
+      ]
+    };
+
+    function updateEditorControls() {
+      var isNew = !editor.formId;
+      var st = editor.status;
+      $("save-draft-btn").classList.toggle("hidden", !(isNew || st === "draft"));
+      $("publish-btn").textContent = isNew || st === "draft" ? "Publish" : "Save";
+      $("editor-results").classList.toggle("hidden", isNew);
+
+      var chip = $("status-chip-btn");
+      if (isNew) {
+        chip.classList.add("hidden");
+        setEditorStatus("unsaved");
+      } else {
+        chip.classList.remove("hidden");
+        $("status-chip-label").textContent = STATUS_LABELS[st] || st;
+        $("status-chip-dot").className = "status-dot " + st;
+      }
+      renderStatusMenu();
+      editor.publishedUrl = editor.formId && st !== "draft" ? "/f/" + editor.formId : null;
+      renderShareBar();
+    }
+
+    function renderStatusMenu() {
+      var menu = $("status-menu");
+      menu.innerHTML = "";
+      (STATUS_ACTIONS[editor.status] || []).forEach(function (action) {
+        var btn = el("button", null, action.label);
+        btn.type = "button";
+        if (action.hint) btn.appendChild(el("span", "menu-hint", action.hint));
+        btn.addEventListener("click", function () {
+          menu.classList.add("hidden");
+          setFormStatus(action.to);
+        });
+        menu.appendChild(btn);
+      });
+    }
+
+    function setFormStatus(status) {
+      if (!editor.formId) return;
+      setEditorStatus("updating…");
+      apiFetch("/api/forms/" + editor.formId, {
+        method: "PUT",
+        body: JSON.stringify({ status: status })
+      })
+        .then(function (res) {
+          return res.json().then(function (body) {
+            if (!res.ok) throw new Error(body.error || ("Failed (" + res.status + ")"));
+            return body;
+          });
+        })
+        .then(function (body) {
+          editor.status = body.status;
+          setEditorStatus(
+            body.status === "published" ? "published ✓" : body.status === "closed" ? "responses closed" : "unpublished — draft"
+          );
+          updateEditorControls();
+        })
+        .catch(function (err) {
+          setEditorStatus(err.message || "Status change failed");
+        });
+    }
+
+    function openEditor(formId, schema, startInJsonMode, status) {
       editor.formId = formId;
       editor.schema = schema;
       editor.expanded = -1;
-      editor.publishedUrl = formId ? "/f/" + formId : null;
+      editor.status = formId ? status || "published" : null;
       $("editor-title").value = schema.title || "";
-      $("publish-btn").textContent = formId ? "Save" : "Publish";
-      $("editor-results").classList.toggle("hidden", !formId);
-      setEditorStatus(formId ? "" : "draft");
-      renderShareBar();
-      setJsonMode(!!startInJsonMode, true);
+      resetAiChat();
+      updateEditorControls();
+      setPanelMode(startInJsonMode ? "json" : "fields");
       renderFieldList();
       show("view-editor");
       schedulePreview(0);
@@ -1175,6 +1351,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       var full = location.origin + editor.publishedUrl;
       $("share-url").textContent = full;
       $("share-open").href = editor.publishedUrl;
+      $("share-live-label").textContent = editor.status === "closed" ? "Closed — page shows a notice at" : "Live at";
       bar.classList.remove("hidden");
     }
 
@@ -1236,6 +1413,13 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         head.appendChild(el("span", "field-head-title", fieldSummary(f)));
 
         var actions = el("div", "field-head-actions");
+        var aiBtn = el("button", "icon-btn", "✨");
+        aiBtn.type = "button";
+        aiBtn.title = "Edit this question with AI";
+        aiBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openAiPanel(f.id);
+        });
         var upBtn = el("button", "icon-btn", "↑");
         upBtn.type = "button"; upBtn.title = "Move up";
         upBtn.addEventListener("click", function (e) { e.stopPropagation(); moveField(i, -1); });
@@ -1245,6 +1429,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         var delBtn = el("button", "icon-btn danger", "×");
         delBtn.type = "button"; delBtn.title = "Delete";
         delBtn.addEventListener("click", function (e) { e.stopPropagation(); deleteField(i); });
+        actions.appendChild(aiBtn);
         actions.appendChild(upBtn);
         actions.appendChild(downBtn);
         actions.appendChild(delBtn);
@@ -1425,18 +1610,21 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       });
     }
 
-    // ── JSON mode ──
-    function setJsonMode(on, skipSerialize) {
-      editor.jsonMode = on;
-      $("fields-panel").classList.toggle("hidden", on);
-      $("json-panel").classList.toggle("hidden", !on);
-      $("json-toggle").textContent = on ? "Fields" : "JSON";
+    // ── Left panel modes: fields | json | ai ──
+    function setPanelMode(mode) {
+      editor.panelMode = mode;
+      $("fields-panel").classList.toggle("hidden", mode !== "fields");
+      $("json-panel").classList.toggle("hidden", mode !== "json");
+      $("ai-panel").classList.toggle("hidden", mode !== "ai");
+      $("json-toggle").textContent = mode === "json" ? "Fields" : "JSON";
+      $("ai-toggle").textContent = mode === "ai" ? "Fields" : "✨ AI";
       $("json-error").textContent = "";
-      if (on && !skipSerialize) {
+      if (mode === "json" && editor.schema) {
         $("json-text").value = JSON.stringify(editor.schema, null, 2);
       }
-      if (on && skipSerialize && editor.schema) {
-        $("json-text").value = JSON.stringify(editor.schema, null, 2);
+      if (mode === "ai") {
+        renderAiPanel();
+        if (aiConfigured !== false) $("ai-chat-input").focus();
       }
     }
 
@@ -1495,17 +1683,21 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         });
     }
 
-    // ── Publish ──
-    function publish() {
+    // ── Save / publish ──
+    // targetStatus: "draft" saves without going live; "published" publishes;
+    // undefined keeps the current status (plain save on live/closed forms).
+    function saveForm(targetStatus, btn) {
       if (!editor.schema) return;
-      var btn = $("publish-btn");
+      var idle = btn.textContent;
       btn.disabled = true;
-      var isUpdate = !!editor.formId;
-      btn.textContent = isUpdate ? "Saving…" : "Publishing…";
+      btn.textContent = targetStatus === "draft" ? "Saving…" : editor.formId ? "Saving…" : "Publishing…";
 
-      var request = isUpdate
-        ? apiFetch("/api/forms/" + editor.formId, { method: "PUT", body: JSON.stringify({ schema: editor.schema }) })
-        : apiFetch("/api/forms", { method: "POST", body: JSON.stringify({ schema: editor.schema }) });
+      var payload = { schema: editor.schema };
+      if (targetStatus) payload.status = targetStatus;
+
+      var request = editor.formId
+        ? apiFetch("/api/forms/" + editor.formId, { method: "PUT", body: JSON.stringify(payload) })
+        : apiFetch("/api/forms", { method: "POST", body: JSON.stringify(payload) });
 
       request
         .then(function (res) {
@@ -1515,22 +1707,32 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           });
         })
         .then(function (body) {
-          if (!isUpdate) {
-            editor.formId = body.id;
-            editor.publishedUrl = body.url;
-            $("editor-results").classList.remove("hidden");
-          }
-          renderShareBar();
-          btn.textContent = "Save";
-          setEditorStatus(isUpdate ? "saved ✓" : "published ✓");
+          editor.formId = body.id || editor.formId;
+          if (body.status) editor.status = body.status;
+          setEditorStatus(
+            editor.status === "draft" ? "draft saved ✓" : editor.status === "closed" ? "saved ✓" : "published ✓"
+          );
+          updateEditorControls();
         })
         .catch(function (err) {
           setEditorStatus("");
-          $("preview-error").textContent = err.message || "Publish failed.";
+          $("preview-error").textContent = err.message || "Save failed.";
           $("preview-error").classList.remove("hidden");
-          btn.textContent = isUpdate ? "Save" : "Publish";
         })
-        .then(function () { btn.disabled = false; });
+        .then(function () {
+          btn.disabled = false;
+          if (btn.textContent.indexOf("…") !== -1) btn.textContent = idle;
+          updateEditorControls();
+        });
+    }
+
+    function publish() {
+      var isNewOrDraft = !editor.formId || editor.status === "draft";
+      saveForm(isNewOrDraft ? "published" : undefined, $("publish-btn"));
+    }
+
+    function saveDraft() {
+      saveForm("draft", $("save-draft-btn"));
     }
 
     // ── Results view ──
@@ -2076,7 +2278,14 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         var li = el("li", "form-card");
 
         var main = el("div", "form-card-main");
-        main.appendChild(el("div", "form-title", f.title || "Untitled form"));
+        var titleRow = el("div", "form-title", f.title || "Untitled form");
+        if (f.status && f.status !== "published") {
+          var chip = el("span", "status-chip");
+          chip.appendChild(el("span", "status-dot " + f.status));
+          chip.appendChild(document.createTextNode(f.status === "draft" ? "Draft" : "Closed"));
+          titleRow.appendChild(chip);
+        }
+        main.appendChild(titleRow);
 
         var meta = el("div", "form-meta");
         var responses = el("span");
@@ -2100,21 +2309,24 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         editBtn.type = "button";
         editBtn.addEventListener("click", function () { loadFormIntoEditor(f.id); });
 
-        var openBtn = el("a", "btn-ghost", "Open");
-        openBtn.href = f.url;
-        openBtn.target = "_blank";
-        openBtn.rel = "noopener";
-
-        var copyBtn = el("button", "btn-ghost", "Copy link");
-        copyBtn.type = "button";
-        copyBtn.addEventListener("click", function () {
-          copyToClipboard(location.origin + f.url, copyBtn, "Copy link");
-        });
-
         actions.appendChild(resultsBtn);
         actions.appendChild(editBtn);
-        actions.appendChild(openBtn);
-        actions.appendChild(copyBtn);
+
+        // Live-link actions only make sense once the form is off draft
+        if (f.status !== "draft") {
+          var openBtn = el("a", "btn-ghost", "Open");
+          openBtn.href = f.url;
+          openBtn.target = "_blank";
+          openBtn.rel = "noopener";
+
+          var copyBtn = el("button", "btn-ghost", "Copy link");
+          copyBtn.type = "button";
+          copyBtn.addEventListener("click", function () {
+            copyToClipboard(location.origin + f.url, copyBtn, "Copy link");
+          });
+          actions.appendChild(openBtn);
+          actions.appendChild(copyBtn);
+        }
 
         li.appendChild(main);
         li.appendChild(actions);
@@ -2151,7 +2363,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         })
         .then(function (body) {
           setStatus("");
-          openEditor(body.id, body.schema || {}, false);
+          openEditor(body.id, body.schema || {}, false, body.status);
         })
         .catch(function (err) {
           setStatus(err.message, true);
@@ -2209,12 +2421,10 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
     }
     $("new-form-btn").addEventListener("click", function (e) {
       e.stopPropagation();
-      $("ai-pane").classList.add("hidden");
       toggleMenu("new-form-menu");
     });
     $("empty-new-btn").addEventListener("click", function (e) {
       e.stopPropagation();
-      $("ai-pane").classList.add("hidden");
       toggleMenu("new-form-menu");
     });
     $("new-form-menu").addEventListener("click", function (e) {
@@ -2223,8 +2433,8 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       if (!tpl) return;
       $("new-form-menu").classList.add("hidden");
       if (tpl === "ai") {
-        e.stopPropagation();
-        openAiPane();
+        openEditor(null, tplBlank(), false);
+        openAiPanel(null);
       } else if (tpl === "json") {
         openEditor(null, tplBlank(), true);
         $("json-text").value = "";
@@ -2234,35 +2444,83 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       }
     });
 
-    // ── Create with AI ──
+    // ── Create with AI (conversational) ──
     var aiConfigured = null;
+    var aiChat = { messages: [], fieldId: null, busy: false };
+
     function loadAiStatus() {
       apiFetch("/api/generate/status")
         .then(function (res) { return res.ok ? res.json() : { configured: false }; })
         .then(function (body) { aiConfigured = !!body.configured; })
         .catch(function () { aiConfigured = false; });
     }
-    function openAiPane() {
-      $("ai-form").classList.toggle("hidden", aiConfigured === false);
-      $("ai-unconfigured").classList.toggle("hidden", aiConfigured !== false);
-      $("ai-error").textContent = "";
-      $("ai-pane").classList.remove("hidden");
-      if (aiConfigured !== false) $("ai-desc").focus();
+
+    function resetAiChat() {
+      aiChat = { messages: [], fieldId: null, busy: false };
     }
-    $("ai-pane").addEventListener("click", function (e) { e.stopPropagation(); });
-    $("ai-generate").addEventListener("click", function () {
-      var description = $("ai-desc").value.trim();
-      if (!description) {
-        $("ai-error").textContent = "Describe the form you want first.";
-        return;
+
+    function fieldTitleById(id) {
+      var f = ((editor.schema && editor.schema.fields) || []).filter(function (x) { return x && x.id === id; })[0];
+      return f ? f.title || f.id : id;
+    }
+
+    function renderAiPanel() {
+      var unconfigured = aiConfigured === false;
+      $("ai-unconfigured").classList.toggle("hidden", !unconfigured);
+      $("ai-input-row").classList.toggle("hidden", unconfigured);
+
+      var ctx = $("ai-context");
+      if (aiChat.fieldId) {
+        $("ai-context-label").textContent = "Editing: " + fieldTitleById(aiChat.fieldId);
+        ctx.classList.remove("hidden");
+      } else {
+        ctx.classList.add("hidden");
       }
-      var btn = $("ai-generate");
-      btn.disabled = true;
-      btn.textContent = "Generating…";
-      $("ai-error").textContent = "";
+
+      var box = $("ai-messages");
+      box.innerHTML = "";
+      if (aiChat.messages.length === 0 && !unconfigured) {
+        box.appendChild(
+          el(
+            "div",
+            "ai-empty",
+            aiChat.fieldId
+              ? "Tell me what to do with this question — reword it, add options, make it required, split it in two…"
+              : "Describe the form you want, or ask for changes — I'll update the form and the live preview as we go."
+          )
+        );
+      }
+      aiChat.messages.forEach(function (m) {
+        box.appendChild(el("div", "ai-msg " + (m.role === "user" ? "user" : "assistant"), m.content));
+      });
+      if (aiChat.busy) {
+        box.appendChild(el("div", "ai-msg assistant typing", "Thinking…"));
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function openAiPanel(fieldId) {
+      aiChat.fieldId = fieldId || null;
+      setPanelMode("ai");
+    }
+
+    function sendAiMessage() {
+      if (aiChat.busy || aiConfigured === false) return;
+      var input = $("ai-chat-input");
+      var text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      aiChat.messages.push({ role: "user", content: text });
+      aiChat.busy = true;
+      renderAiPanel();
+
       apiFetch("/api/generate", {
         method: "POST",
-        body: JSON.stringify({ description: description })
+        body: JSON.stringify({
+          messages: aiChat.messages,
+          schema: editor.schema,
+          field_id: aiChat.fieldId || undefined
+        })
       })
         .then(function (res) {
           return res.json().then(function (body) {
@@ -2271,23 +2529,29 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           });
         })
         .then(function (body) {
-          $("ai-pane").classList.add("hidden");
-          $("ai-desc").value = "";
-          openEditor(null, body.schema, false);
+          aiChat.messages.push({ role: "assistant", content: body.message || "Done." });
+          if (body.schema) {
+            editor.schema = body.schema;
+            $("editor-title").value = body.schema.title || "";
+            editor.expanded = -1;
+            renderFieldList();
+            onFieldEdited();
+          }
         })
         .catch(function (err) {
-          $("ai-error").textContent = err.message || "Generation failed.";
+          aiChat.messages.push({ role: "assistant", content: "⚠ " + (err.message || "Something went wrong — try again.") });
         })
         .then(function () {
-          btn.disabled = false;
-          btn.textContent = "Generate form";
+          aiChat.busy = false;
+          renderAiPanel();
+          if (aiConfigured !== false) $("ai-chat-input").focus();
         });
-    });
+    }
 
     document.addEventListener("click", function () {
       $("new-form-menu").classList.add("hidden");
       $("add-field-menu").classList.add("hidden");
-      $("ai-pane").classList.add("hidden");
+      $("status-menu").classList.add("hidden");
     });
 
     $("editor-back").addEventListener("click", function () {
@@ -2301,7 +2565,29 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       onFieldEdited();
     });
     $("publish-btn").addEventListener("click", publish);
-    $("json-toggle").addEventListener("click", function () { setJsonMode(!editor.jsonMode); });
+    $("save-draft-btn").addEventListener("click", saveDraft);
+    $("status-chip-btn").addEventListener("click", function (e) {
+      e.stopPropagation();
+      $("status-menu").classList.toggle("hidden");
+    });
+    $("status-menu").addEventListener("click", function (e) { e.stopPropagation(); });
+    $("json-toggle").addEventListener("click", function () {
+      setPanelMode(editor.panelMode === "json" ? "fields" : "json");
+    });
+    $("ai-toggle").addEventListener("click", function () {
+      setPanelMode(editor.panelMode === "ai" ? "fields" : "ai");
+    });
+    $("ai-send").addEventListener("click", sendAiMessage);
+    $("ai-chat-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendAiMessage();
+      }
+    });
+    $("ai-context-clear").addEventListener("click", function () {
+      aiChat.fieldId = null;
+      renderAiPanel();
+    });
     $("json-apply").addEventListener("click", applyJson);
     $("add-field-btn").addEventListener("click", function (e) {
       e.stopPropagation();
@@ -2345,7 +2631,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       if (e.key === "Escape") {
         $("new-form-menu").classList.add("hidden");
         $("add-field-menu").classList.add("hidden");
-        $("ai-pane").classList.add("hidden");
+        $("status-menu").classList.add("hidden");
       }
     });
 

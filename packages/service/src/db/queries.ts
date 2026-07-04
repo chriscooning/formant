@@ -1,7 +1,13 @@
 // ─── Database Row Types ───
 // Re-export from interface for backward compatibility
-import type { FormRow, FormSummaryRow, ResponseRow } from "./interface";
-export type { FormRow, FormSummaryRow, ResponseRow, AnalyticsResult } from "./interface";
+import type { FormRow, FormStatus, FormSummaryRow, ResponseRow } from "./interface";
+export type {
+  FormRow,
+  FormStatus,
+  FormSummaryRow,
+  ResponseRow,
+  AnalyticsResult,
+} from "./interface";
 
 // ─── Form Queries ───
 
@@ -13,14 +19,22 @@ export async function insertForm(
     html: string;
     schemaJson: string;
     apiKeyHash: string | null;
+    status?: FormStatus;
   },
 ): Promise<FormRow> {
   await db
     .prepare(
-      `INSERT INTO forms (id, title, html, schema_json, api_key_hash)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO forms (id, title, html, schema_json, api_key_hash, status)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind(params.id, params.title, params.html, params.schemaJson, params.apiKeyHash)
+    .bind(
+      params.id,
+      params.title,
+      params.html,
+      params.schemaJson,
+      params.apiKeyHash,
+      params.status ?? "published",
+    )
     .run();
 
   const row = await db.prepare("SELECT * FROM forms WHERE id = ?").bind(params.id).first<FormRow>();
@@ -39,7 +53,7 @@ export async function listFormsByApiKeyHash(
 ): Promise<FormSummaryRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, title, created_at, updated_at, view_count, submit_count
+      `SELECT id, title, created_at, updated_at, view_count, submit_count, status
        FROM forms WHERE api_key_hash = ? ORDER BY created_at DESC`,
     )
     .bind(apiKeyHash)
@@ -54,10 +68,15 @@ export async function updateForm(
     title?: string | null;
     html?: string;
     schemaJson?: string;
+    status?: FormStatus;
   },
 ): Promise<FormRow | null> {
   const sets: string[] = [];
   const binds: (string | null)[] = [];
+  if (params.status !== undefined) {
+    sets.push("status = ?");
+    binds.push(params.status);
+  }
   if (params.title !== undefined) {
     sets.push("title = ?");
     binds.push(params.title);

@@ -49,9 +49,11 @@ Run `pnpm formant deploy forms/my-form.html` for an interactive menu. Use `pnpm 
 Once a backend is deployed (Cloudflare or Vercel), open **`/admin`** on your worker URL and sign in with your API key. From the browser you can:
 
 - **See all your forms** with response and view counts
-- **Create forms with AI** — describe the form in plain English (needs an Anthropic API key on the backend: `wrangler secret put ANTHROPIC_API_KEY`)
+- **Create forms with AI** — chat back and forth in plain English; the AI drafts, asks clarifying questions, and refines while the live preview updates (needs an Anthropic API key on the backend: `wrangler secret put ANTHROPIC_API_KEY`)
+- **Edit any single question with AI** — hit ✨ on a field to reword it, add options, or split it up
 - **Create forms** from templates (blank, feedback, NPS) or by pasting an AI-generated schema
 - **Edit with a live preview** — the preview pane is the real form
+- **Control the lifecycle** — save as a draft, publish when ready, close responses (the page shows a notice), reopen, or unpublish
 - **Publish with one click** — responses automatically flow to your backend
 - **Share your form** — copy the live link, download a QR code, or grab an embed snippet
 - **View results** — analytics (views, submissions, completion rate, drop-off), a responses table, CSV/Excel export, and Connect Google Sheet

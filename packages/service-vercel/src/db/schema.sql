@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS forms (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   view_count INTEGER DEFAULT 0,
-  submit_count INTEGER DEFAULT 0
+  submit_count INTEGER DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'published'
 );
 
 CREATE TABLE IF NOT EXISTS responses (

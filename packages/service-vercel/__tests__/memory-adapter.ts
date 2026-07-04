@@ -5,6 +5,7 @@
 import type {
   DbAdapter,
   FormRow,
+  FormStatus,
   FormSummaryRow,
   ResponseRow,
   AnalyticsResult,
@@ -26,6 +27,7 @@ export class MemoryAdapter implements DbAdapter {
     html: string;
     schemaJson: string;
     apiKeyHash: string | null;
+    status?: FormStatus;
   }): Promise<FormRow> {
     const now = new Date().toISOString();
     const row: FormRow = {
@@ -38,6 +40,7 @@ export class MemoryAdapter implements DbAdapter {
       updated_at: now,
       view_count: 0,
       submit_count: 0,
+      status: params.status ?? "published",
     };
     this.forms.set(params.id, row);
     return row;
@@ -58,6 +61,7 @@ export class MemoryAdapter implements DbAdapter {
         updated_at: f.updated_at,
         view_count: f.view_count,
         submit_count: f.submit_count,
+        status: f.status,
       }));
   }
 
@@ -66,12 +70,14 @@ export class MemoryAdapter implements DbAdapter {
     title?: string | null;
     html?: string;
     schemaJson?: string;
+    status?: FormStatus;
   }): Promise<FormRow | null> {
     const form = this.forms.get(params.id);
     if (!form) return null;
     if (params.title !== undefined) form.title = params.title;
     if (params.html !== undefined) form.html = params.html;
     if (params.schemaJson !== undefined) form.schema_json = params.schemaJson;
+    if (params.status !== undefined) form.status = params.status;
     form.updated_at = new Date().toISOString();
     this.forms.set(params.id, form);
     return form;

@@ -17,6 +17,7 @@ const MOCK_FORM: FormRow = {
   updated_at: "2024-01-01T00:00:00Z",
   view_count: 0,
   submit_count: 0,
+  status: "published",
 };
 
 const MOCK_RESPONSE: ResponseRow = {

@@ -21,7 +21,8 @@ beforeAll(async () => {
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now')),
         view_count INTEGER DEFAULT 0,
-        submit_count INTEGER DEFAULT 0
+        submit_count INTEGER DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'published'
       )
     `),
     env.DB.prepare(`
@@ -36,18 +37,12 @@ beforeAll(async () => {
         updated_at TEXT DEFAULT (datetime('now'))
       )
     `),
-    env.DB.prepare(
-      "CREATE INDEX IF NOT EXISTS idx_responses_form_id ON responses(form_id)",
-    ),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_responses_form_id ON responses(form_id)"),
     env.DB.prepare(
       "CREATE INDEX IF NOT EXISTS idx_responses_submitted_at ON responses(submitted_at)",
     ),
-    env.DB.prepare(
-      "CREATE INDEX IF NOT EXISTS idx_responses_status ON responses(status)",
-    ),
-    env.DB.prepare(
-      "CREATE INDEX IF NOT EXISTS idx_responses_session_id ON responses(session_id)",
-    ),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_responses_status ON responses(status)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_responses_session_id ON responses(session_id)"),
     env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS form_views_daily (
         form_id TEXT NOT NULL,

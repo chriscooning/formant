@@ -8,6 +8,15 @@ const responsesApp = new Hono<AppEnv>();
 // ─── POST /api/responses/:formId — Submit a response (public, no auth) ───
 
 responsesApp.post("/api/responses/:formId", async (c) => {
+  {
+    const form = await c.env.db.getFormById(c.req.param("formId"));
+    if (!form || form.status === "draft") {
+      return c.json({ error: "Form not found" }, 404);
+    }
+    if (form.status === "closed") {
+      return c.json({ error: "This form is no longer accepting responses" }, 403);
+    }
+  }
   const formId = c.req.param("formId");
 
   const form = await c.env.db.getFormById(formId);
@@ -52,6 +61,15 @@ responsesApp.post("/api/responses/:formId", async (c) => {
 // ─── PUT /api/responses/:formId/:responseId — Update a response (public, auto-save) ───
 
 responsesApp.put("/api/responses/:formId/:responseId", async (c) => {
+  {
+    const form = await c.env.db.getFormById(c.req.param("formId"));
+    if (!form || form.status === "draft") {
+      return c.json({ error: "Form not found" }, 404);
+    }
+    if (form.status === "closed") {
+      return c.json({ error: "This form is no longer accepting responses" }, 403);
+    }
+  }
   const formId = c.req.param("formId");
   const responseId = c.req.param("responseId");
 
@@ -108,15 +126,12 @@ responsesApp.get("/api/responses/:formId", requireAuth(), async (c) => {
   const since = c.req.query("since");
   const status = c.req.query("status") as "in_progress" | "completed" | "all" | undefined;
 
-  const { responses: rows, total } = await c.env.db.getResponsesByFormId(
-    formId,
-    {
-      limit,
-      offset,
-      since: since ?? undefined,
-      status: status ?? "all",
-    },
-  );
+  const { responses: rows, total } = await c.env.db.getResponsesByFormId(formId, {
+    limit,
+    offset,
+    since: since ?? undefined,
+    status: status ?? "all",
+  });
 
   const formattedResponses = rows.map((row) => {
     const metadata = row.metadata_json ? JSON.parse(row.metadata_json) : null;
@@ -151,21 +166,13 @@ responsesApp.get("/api/responses/:formId/analytics", requireAuth(), async (c) =>
   }
 
   const daysParam = c.req.query("days");
-  const days =
-    daysParam === "14"
-      ? 14
-      : daysParam === "30"
-        ? 30
-        : 7;
+  const days = daysParam === "14" ? 14 : daysParam === "30" ? 30 : 7;
 
   try {
     const analytics = await c.env.db.getAnalytics(formId, days);
     return c.json(analytics);
   } catch (e) {
-    return c.json(
-      { error: e instanceof Error ? e.message : "Analytics error" },
-      500,
-    );
+    return c.json({ error: e instanceof Error ? e.message : "Analytics error" }, 500);
   }
 });
 

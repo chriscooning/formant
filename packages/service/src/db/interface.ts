@@ -1,6 +1,8 @@
 // ─── Database Adapter Interface ───
 // Platform-agnostic interface for D1 (Cloudflare) and Postgres (Vercel).
 
+export type FormStatus = "draft" | "published" | "closed";
+
 export interface FormRow {
   id: string;
   title: string | null;
@@ -11,6 +13,7 @@ export interface FormRow {
   updated_at: string;
   view_count: number;
   submit_count: number;
+  status: FormStatus;
 }
 
 /** Slim projection of FormRow for listings — omits html/schema/api_key_hash. */
@@ -21,6 +24,7 @@ export interface FormSummaryRow {
   updated_at: string;
   view_count: number;
   submit_count: number;
+  status: FormStatus;
 }
 
 export interface ResponseRow {
@@ -56,6 +60,7 @@ export interface DbAdapter {
     html: string;
     schemaJson: string;
     apiKeyHash: string | null;
+    status?: FormStatus;
   }): Promise<FormRow>;
   getFormById(id: string): Promise<FormRow | null>;
   listFormsByApiKeyHash(apiKeyHash: string): Promise<FormSummaryRow[]>;
@@ -64,6 +69,7 @@ export interface DbAdapter {
     title?: string | null;
     html?: string;
     schemaJson?: string;
+    status?: FormStatus;
   }): Promise<FormRow | null>;
   incrementViewCount(id: string): Promise<void>;
   incrementViewCountDaily(formId: string): Promise<void>;

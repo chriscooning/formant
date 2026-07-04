@@ -14,6 +14,7 @@ export type { Bindings, Variables, AppEnv } from "./types";
 export type {
   DbAdapter,
   FormRow,
+  FormStatus,
   FormSummaryRow,
   ResponseRow,
   AnalyticsResult,
