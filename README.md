@@ -53,7 +53,8 @@ Once a backend is deployed (Cloudflare or Vercel), open **`/admin`** on your wor
 - **Create forms** from templates (blank, feedback, NPS) or by pasting an AI-generated schema
 - **Edit with a live preview** — the preview pane is the real form
 - **Publish with one click** — responses automatically flow to your backend
-- **View results** — analytics (views, submissions, completion rate, drop-off), a responses table, and CSV/Excel export
+- **Share your form** — copy the live link, download a QR code, or grab an embed snippet
+- **View results** — analytics (views, submissions, completion rate, drop-off), a responses table, CSV/Excel export, and Connect Google Sheet
 
 Forms created in the editor and forms deployed via the CLI live side by side. If you change the renderer, regenerate the embedded runtime with `pnpm build:runtime:embed` before redeploying the worker.
 
