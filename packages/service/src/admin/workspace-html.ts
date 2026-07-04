@@ -401,6 +401,109 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       z-index: 10;
     }
 
+    /* ── Results view ── */
+    :root {
+      --chart-submissions: #6c5ce7;
+      --chart-views: #0d9488;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --chart-views: #14b8a6; }
+    }
+    [data-theme="light"] { --chart-views: #14b8a6; }
+    [data-theme="dark"] { --chart-views: #0d9488; }
+
+    .results-scroll { flex: 1; overflow-y: auto; }
+    .results-main { max-width: 980px; margin: 0 auto; padding: 28px 24px 64px; }
+    .results-section { margin-bottom: 28px; }
+    .range-row { display: flex; gap: 6px; margin-bottom: 16px; align-items: center; }
+    .range-row .spacer { flex: 1; }
+    .range-btn.active { border-color: var(--ff-accent); color: var(--ff-text); }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    @media (max-width: 640px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+    .stat-tile {
+      background: var(--ff-surface);
+      border: 1px solid var(--ff-border);
+      border-radius: var(--ff-radius);
+      padding: 14px 16px;
+    }
+    .stat-tile .stat-label {
+      font-family: var(--ff-font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ff-text-secondary);
+      margin-bottom: 6px;
+    }
+    .stat-tile .stat-value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+    .chart-card {
+      background: var(--ff-surface);
+      border: 1px solid var(--ff-border);
+      border-radius: var(--ff-radius);
+      padding: 16px;
+      position: relative;
+    }
+    .chart-legend {
+      display: flex; gap: 16px; align-items: center;
+      font-size: 12.5px; color: var(--ff-text-secondary);
+      margin-bottom: 10px;
+    }
+    .chart-legend .chip {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 3px; margin-right: 6px; vertical-align: -1px;
+    }
+    .chart-legend .spacer { flex: 1; }
+    .chart-svg-wrap { position: relative; }
+    .chart-svg-wrap svg { display: block; width: 100%; height: auto; }
+    .chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: var(--ff-bg);
+      border: 1px solid var(--ff-border-hover);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: nowrap;
+      z-index: 20;
+      display: none;
+    }
+    .chart-tooltip .tt-date { color: var(--ff-text-secondary); font-family: var(--ff-font-mono); font-size: 10.5px; }
+    .data-table-wrap { overflow-x: auto; }
+    table.data-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    .data-table th, .data-table td {
+      border-bottom: 1px solid var(--ff-border);
+      padding: 8px 10px;
+      text-align: left;
+      max-width: 260px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .data-table th {
+      font-family: var(--ff-font-mono);
+      font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--ff-text-secondary);
+      font-weight: 400;
+    }
+    .status-badge {
+      font-family: var(--ff-font-mono); font-size: 10px;
+      border: 1px solid var(--ff-border-hover);
+      border-radius: 999px;
+      color: var(--ff-text-secondary);
+      padding: 2px 8px;
+    }
+    .responses-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .responses-head h2 { font-size: 16px; font-weight: 600; flex: 1; }
+    .responses-head select {
+      background: var(--ff-surface);
+      border: 1px solid var(--ff-border);
+      border-radius: 999px;
+      color: var(--ff-text-secondary);
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+    }
+    .load-more-row { text-align: center; padding: 14px 0 0; }
+    .results-empty { color: var(--ff-text-secondary); font-size: 14px; padding: 18px 0; }
+
     @media (max-width: 760px) {
       .editor-main { grid-template-columns: 1fr; grid-template-rows: 45% 55%; }
       .editor-panel { border-right: none; border-bottom: 1px solid var(--ff-border); }
@@ -467,6 +570,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       <button id="editor-back" class="btn-ghost" type="button">←</button>
       <input id="editor-title" class="editor-title-input" type="text" placeholder="Untitled form" spellcheck="false">
       <span id="editor-status" class="editor-status"></span>
+      <button id="editor-results" class="btn-ghost hidden" type="button">Results</button>
       <button id="json-toggle" class="btn-ghost" type="button">JSON</button>
       <button id="publish-btn" class="btn-primary" type="button">Publish</button>
     </div>
@@ -495,6 +599,57 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         <div id="preview-loading" class="preview-loading hidden">rendering…</div>
         <div id="preview-error" class="preview-error hidden"></div>
         <iframe id="preview-frame" title="Form preview"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Results ── -->
+  <div id="view-results" class="editor-shell hidden">
+    <div class="editor-topbar">
+      <button id="results-back" class="btn-ghost" type="button">←</button>
+      <input id="results-title" class="editor-title-input" type="text" readonly>
+      <button id="results-edit" class="btn-ghost" type="button">Edit form</button>
+      <a id="results-open" class="btn-ghost" target="_blank" rel="noopener">Open</a>
+    </div>
+    <div class="results-scroll">
+      <div class="results-main">
+        <div class="results-section">
+          <div class="range-row">
+            <button class="btn-ghost range-btn active" type="button" data-days="7">7 days</button>
+            <button class="btn-ghost range-btn" type="button" data-days="14">14 days</button>
+            <button class="btn-ghost range-btn" type="button" data-days="30">30 days</button>
+            <span class="spacer"></span>
+            <span id="analytics-status" class="editor-status"></span>
+          </div>
+          <div id="stat-grid" class="stat-grid"></div>
+          <div class="chart-card">
+            <div class="chart-legend">
+              <span><span class="chip" style="background: var(--chart-submissions)"></span>Submissions</span>
+              <span><span class="chip" style="background: var(--chart-views)"></span>Views</span>
+              <span class="spacer"></span>
+              <button id="chart-table-toggle" class="btn-ghost" type="button">Table</button>
+            </div>
+            <div id="chart-area" class="chart-svg-wrap"></div>
+            <div id="chart-tooltip" class="chart-tooltip"></div>
+          </div>
+          <div id="dropoff-line" class="results-empty hidden"></div>
+        </div>
+        <div class="results-section">
+          <div class="responses-head">
+            <h2>Responses</h2>
+            <select id="status-filter">
+              <option value="completed">Completed</option>
+              <option value="in_progress">Partial</option>
+              <option value="all">All</option>
+            </select>
+            <button id="export-csv" class="btn-ghost" type="button">CSV</button>
+            <button id="export-xlsx" class="btn-ghost" type="button">Excel</button>
+          </div>
+          <div id="responses-area" class="data-table-wrap"></div>
+          <div class="load-more-row">
+            <button id="load-more" class="btn-ghost hidden" type="button">Load more</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -543,7 +698,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
     }
 
     // ── Views ──
-    var views = ["view-login", "view-workspace", "view-editor"];
+    var views = ["view-login", "view-workspace", "view-editor", "view-results"];
     function show(viewId) {
       views.forEach(function (v) {
         $(v).classList.toggle("hidden", v !== viewId);
@@ -646,6 +801,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       editor.publishedUrl = formId ? "/f/" + formId : null;
       $("editor-title").value = schema.title || "";
       $("publish-btn").textContent = formId ? "Save" : "Publish";
+      $("editor-results").classList.toggle("hidden", !formId);
       setEditorStatus(formId ? "" : "draft");
       renderShareBar();
       setJsonMode(!!startInJsonMode, true);
@@ -964,6 +1120,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           if (!isUpdate) {
             editor.formId = body.id;
             editor.publishedUrl = body.url;
+            $("editor-results").classList.remove("hidden");
           }
           renderShareBar();
           btn.textContent = "Save";
@@ -976,6 +1133,369 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           btn.textContent = isUpdate ? "Save" : "Publish";
         })
         .then(function () { btn.disabled = false; });
+    }
+
+    // ── Results view ──
+    var results = {
+      formId: null,
+      title: "",
+      url: "",
+      schema: null,
+      days: 7,
+      chartMode: "chart",
+      status: "completed",
+      analytics: null,
+      rows: [],
+      total: 0
+    };
+    var PAGE_SIZE = 50;
+    var SVGNS = "http://www.w3.org/2000/svg";
+
+    function openResults(formId) {
+      results.formId = formId;
+      results.days = 7;
+      results.chartMode = "chart";
+      results.status = "completed";
+      results.analytics = null;
+      results.rows = [];
+      results.total = 0;
+      $("status-filter").value = "completed";
+      $("chart-table-toggle").textContent = "Table";
+      document.querySelectorAll(".range-btn").forEach(function (b) {
+        b.classList.toggle("active", b.getAttribute("data-days") === "7");
+      });
+      $("stat-grid").innerHTML = "";
+      $("chart-area").innerHTML = "";
+      $("responses-area").innerHTML = "";
+      $("dropoff-line").classList.add("hidden");
+      show("view-results");
+
+      apiFetch("/api/forms/" + formId)
+        .then(function (res) {
+          if (!res.ok) throw new Error("Could not load form (" + res.status + ")");
+          return res.json();
+        })
+        .then(function (body) {
+          results.title = body.title || "Untitled form";
+          results.url = body.url;
+          results.schema = body.schema || {};
+          $("results-title").value = results.title;
+          $("results-open").href = body.url;
+          loadAnalytics();
+          loadResponses(true);
+        })
+        .catch(function (err) {
+          $("analytics-status").textContent = err.message;
+        });
+    }
+
+    // ── Analytics ──
+    function loadAnalytics() {
+      $("analytics-status").textContent = "loading…";
+      apiFetch("/api/responses/" + results.formId + "/analytics?days=" + results.days)
+        .then(function (res) {
+          if (!res.ok) throw new Error("Analytics failed (" + res.status + ")");
+          return res.json();
+        })
+        .then(function (body) {
+          results.analytics = body;
+          $("analytics-status").textContent = "";
+          renderStats();
+          renderChartArea();
+          renderDropoff();
+        })
+        .catch(function (err) {
+          $("analytics-status").textContent = err.message;
+        });
+    }
+
+    function formatDuration(sec) {
+      sec = Math.round(sec || 0);
+      if (sec < 60) return sec + "s";
+      return Math.floor(sec / 60) + "m " + (sec % 60) + "s";
+    }
+
+    function statTile(label, value) {
+      var tile = el("div", "stat-tile");
+      tile.appendChild(el("div", "stat-label", label));
+      tile.appendChild(el("div", "stat-value", value));
+      return tile;
+    }
+
+    function renderStats() {
+      var t = results.analytics.totals || {};
+      var grid = $("stat-grid");
+      grid.innerHTML = "";
+      grid.appendChild(statTile("Submissions", String(t.submissions || 0)));
+      grid.appendChild(statTile("Views", String(t.views || 0)));
+      grid.appendChild(statTile("Completion rate", Math.round(t.completionRate || 0) + "%"));
+      grid.appendChild(statTile("Avg time", formatDuration(t.avgDurationSeconds)));
+    }
+
+    function renderDropoff() {
+      var line = $("dropoff-line");
+      var d = results.analytics.highestDropoff;
+      if (!d || !d.count) { line.classList.add("hidden"); return; }
+      line.textContent = "Highest drop-off: \\u201C" + (d.fieldTitle || d.fieldId) + "\\u201D (" + d.count + " left here)";
+      line.classList.remove("hidden");
+    }
+
+    function chartDateLabel(iso) {
+      var d = new Date(iso + "T00:00:00");
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+
+    function svgEl(tag, attrs) {
+      var node = document.createElementNS(SVGNS, tag);
+      for (var k in attrs) node.setAttribute(k, attrs[k]);
+      return node;
+    }
+
+    function renderChartArea() {
+      var area = $("chart-area");
+      area.innerHTML = "";
+      var series = (results.analytics && results.analytics.series) || [];
+      if (!series.length) {
+        area.appendChild(el("div", "results-empty", "No activity in this period yet."));
+        return;
+      }
+      if (results.chartMode === "table") renderChartTable(area, series);
+      else renderChart(area, series);
+    }
+
+    function renderChartTable(area, series) {
+      var wrap = el("div", "data-table-wrap");
+      var table = el("table", "data-table");
+      var thead = el("thead");
+      var hr = el("tr");
+      ["Date", "Views", "Submissions"].forEach(function (h) { hr.appendChild(el("th", null, h)); });
+      thead.appendChild(hr);
+      table.appendChild(thead);
+      var tbody = el("tbody");
+      series.forEach(function (p) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, chartDateLabel(p.date)));
+        tr.appendChild(el("td", null, String(p.views || 0)));
+        tr.appendChild(el("td", null, String(p.submissions || 0)));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      area.appendChild(wrap);
+    }
+
+    function renderChart(area, series) {
+      var W = 840, H = 240, padL = 40, padR = 28, padT = 12, padB = 26;
+      var innerW = W - padL - padR, innerH = H - padT - padB;
+      var maxVal = 0;
+      series.forEach(function (p) {
+        maxVal = Math.max(maxVal, p.views || 0, p.submissions || 0);
+      });
+      if (maxVal < 4) maxVal = 4;
+
+      var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+      svg.setAttribute("aria-label", "Views and submissions over the last " + results.days + " days");
+
+      function x(i) { return padL + (series.length === 1 ? innerW / 2 : (i * innerW) / (series.length - 1)); }
+      function y(v) { return padT + innerH - (v / maxVal) * innerH; }
+
+      // Recessive gridlines + y tick labels (0, mid, max)
+      [0, Math.round(maxVal / 2), maxVal].forEach(function (v) {
+        var gy = y(v);
+        var grid = svgEl("line", { x1: padL, x2: W - padR, y1: gy, y2: gy, "stroke-width": 1 });
+        grid.style.stroke = "var(--ff-border)";
+        svg.appendChild(grid);
+        var label = svgEl("text", { x: padL - 8, y: gy + 3.5, "text-anchor": "end", "font-size": 10 });
+        label.style.fill = "var(--ff-text-secondary)";
+        label.style.fontFamily = "var(--ff-font-mono)";
+        label.textContent = String(v);
+        svg.appendChild(label);
+      });
+
+      // Sparse x labels: first, middle, last
+      var xIdx = series.length > 2 ? [0, Math.floor((series.length - 1) / 2), series.length - 1] : [0, series.length - 1];
+      xIdx.forEach(function (i) {
+        if (i < 0 || i >= series.length) return;
+        var label = svgEl("text", { x: x(i), y: H - 8, "text-anchor": "middle", "font-size": 10 });
+        label.style.fill = "var(--ff-text-secondary)";
+        label.style.fontFamily = "var(--ff-font-mono)";
+        label.textContent = chartDateLabel(series[i].date);
+        svg.appendChild(label);
+      });
+
+      // Series lines (2px)
+      function linePath(key, colorVar) {
+        var points = series.map(function (p, i) { return x(i) + "," + y(p[key] || 0); }).join(" ");
+        var line = svgEl("polyline", { points: points, fill: "none", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" });
+        line.style.stroke = colorVar;
+        svg.appendChild(line);
+      }
+      linePath("views", "var(--chart-views)");
+      linePath("submissions", "var(--chart-submissions)");
+
+      // Hover layer: crosshair + markers + tooltip
+      var crosshair = svgEl("line", { y1: padT, y2: padT + innerH, "stroke-width": 1, visibility: "hidden" });
+      crosshair.style.stroke = "var(--ff-border-hover)";
+      svg.appendChild(crosshair);
+      var dotViews = svgEl("circle", { r: 4, visibility: "hidden", "stroke-width": 2 });
+      dotViews.style.fill = "var(--chart-views)";
+      dotViews.style.stroke = "var(--ff-surface)";
+      svg.appendChild(dotViews);
+      var dotSubs = svgEl("circle", { r: 4, visibility: "hidden", "stroke-width": 2 });
+      dotSubs.style.fill = "var(--chart-submissions)";
+      dotSubs.style.stroke = "var(--ff-surface)";
+      svg.appendChild(dotSubs);
+
+      var tooltip = $("chart-tooltip");
+      svg.addEventListener("mousemove", function (e) {
+        var rect = svg.getBoundingClientRect();
+        var relX = ((e.clientX - rect.left) / rect.width) * W;
+        var i = Math.round(((relX - padL) / innerW) * (series.length - 1));
+        if (series.length === 1) i = 0;
+        if (i < 0) i = 0;
+        if (i >= series.length) i = series.length - 1;
+        var p = series[i];
+        var cx = x(i);
+        crosshair.setAttribute("x1", cx);
+        crosshair.setAttribute("x2", cx);
+        crosshair.setAttribute("visibility", "visible");
+        dotViews.setAttribute("cx", cx);
+        dotViews.setAttribute("cy", y(p.views || 0));
+        dotViews.setAttribute("visibility", "visible");
+        dotSubs.setAttribute("cx", cx);
+        dotSubs.setAttribute("cy", y(p.submissions || 0));
+        dotSubs.setAttribute("visibility", "visible");
+
+        tooltip.innerHTML = "";
+        tooltip.appendChild(el("div", "tt-date", chartDateLabel(p.date)));
+        var subsRow = el("div");
+        var subsChip = el("span", "chip");
+        subsChip.style.cssText = "display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--chart-submissions)";
+        subsRow.appendChild(subsChip);
+        subsRow.appendChild(document.createTextNode((p.submissions || 0) + " submissions"));
+        tooltip.appendChild(subsRow);
+        var viewsRow = el("div");
+        var viewsChip = el("span", "chip");
+        viewsChip.style.cssText = "display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--chart-views)";
+        viewsRow.appendChild(viewsChip);
+        viewsRow.appendChild(document.createTextNode((p.views || 0) + " views"));
+        tooltip.appendChild(viewsRow);
+
+        var areaRect = area.getBoundingClientRect();
+        var pxX = (cx / W) * rect.width + rect.left - areaRect.left;
+        tooltip.style.display = "block";
+        tooltip.style.left = Math.min(pxX + 12, areaRect.width - 150) + "px";
+        tooltip.style.top = "10px";
+      });
+      svg.addEventListener("mouseleave", function () {
+        crosshair.setAttribute("visibility", "hidden");
+        dotViews.setAttribute("visibility", "hidden");
+        dotSubs.setAttribute("visibility", "hidden");
+        tooltip.style.display = "none";
+      });
+
+      area.appendChild(svg);
+    }
+
+    // ── Responses table ──
+    function inputFields(schema) {
+      return ((schema && schema.fields) || []).filter(function (f) {
+        return f && f.type !== "welcome" && f.type !== "ending" && f.type !== "statement";
+      });
+    }
+
+    function formatAnswer(value) {
+      if (value === null || value === undefined || value === "") return "—";
+      if (Array.isArray(value)) return value.join(", ");
+      if (typeof value === "boolean") return value ? "Yes" : "No";
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    }
+
+    function loadResponses(reset) {
+      if (reset) { results.rows = []; results.total = 0; }
+      var q = "?limit=" + PAGE_SIZE + "&offset=" + results.rows.length + "&status=" + results.status;
+      apiFetch("/api/responses/" + results.formId + q)
+        .then(function (res) {
+          if (!res.ok) throw new Error("Responses failed (" + res.status + ")");
+          return res.json();
+        })
+        .then(function (body) {
+          results.rows = results.rows.concat(body.responses || []);
+          results.total = body.total || 0;
+          renderResponses();
+        })
+        .catch(function (err) {
+          $("responses-area").innerHTML = "";
+          $("responses-area").appendChild(el("div", "results-empty", err.message));
+        });
+    }
+
+    function renderResponses() {
+      var area = $("responses-area");
+      area.innerHTML = "";
+      var showStatus = results.status !== "completed";
+
+      if (!results.rows.length) {
+        area.appendChild(el("div", "results-empty", "No responses yet. Share the form link to start collecting."));
+        $("load-more").classList.add("hidden");
+        return;
+      }
+
+      var fields = inputFields(results.schema);
+      var table = el("table", "data-table");
+      var thead = el("thead");
+      var hr = el("tr");
+      hr.appendChild(el("th", null, "Submitted"));
+      if (showStatus) hr.appendChild(el("th", null, "Status"));
+      fields.forEach(function (f) { hr.appendChild(el("th", null, f.title || f.id)); });
+      thead.appendChild(hr);
+      table.appendChild(thead);
+
+      var tbody = el("tbody");
+      results.rows.forEach(function (r) {
+        var answers = {};
+        try { answers = JSON.parse(r.answers_json || "{}"); } catch (_) {}
+        var tr = el("tr");
+        var when = new Date(r.submitted_at);
+        tr.appendChild(el("td", null, isNaN(when.getTime()) ? r.submitted_at : when.toLocaleString()));
+        if (showStatus) {
+          var badge = el("td");
+          badge.appendChild(el("span", "status-badge", r.status === "in_progress" ? "partial" : r.status));
+          tr.appendChild(badge);
+        }
+        fields.forEach(function (f) {
+          var cell = el("td", null, formatAnswer(answers[f.id]));
+          cell.title = formatAnswer(answers[f.id]);
+          tr.appendChild(cell);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      area.appendChild(table);
+
+      $("load-more").classList.toggle("hidden", results.rows.length >= results.total);
+    }
+
+    // ── Exports ──
+    function downloadExport(format) {
+      apiFetch("/api/responses/" + results.formId + "/" + format)
+        .then(function (res) {
+          if (!res.ok) throw new Error("Export failed (" + res.status + ")");
+          return res.blob();
+        })
+        .then(function (blob) {
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = (results.title || "responses").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "." + (format === "xlsx" ? "xlsx" : "csv");
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        })
+        .catch(function (err) {
+          $("analytics-status").textContent = err.message;
+        });
     }
 
     // ── Forms list ──
@@ -1018,6 +1538,10 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
 
         var actions = el("div", "form-actions");
 
+        var resultsBtn = el("button", "btn-ghost", "Results");
+        resultsBtn.type = "button";
+        resultsBtn.addEventListener("click", function () { openResults(f.id); });
+
         var editBtn = el("button", "btn-ghost", "Edit");
         editBtn.type = "button";
         editBtn.addEventListener("click", function () { loadFormIntoEditor(f.id); });
@@ -1040,6 +1564,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           } else { done(); }
         });
 
+        actions.appendChild(resultsBtn);
         actions.appendChild(editBtn);
         actions.appendChild(openBtn);
         actions.appendChild(copyBtn);
@@ -1178,6 +1703,46 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       toggleMenu("add-field-menu");
     });
     $("add-field-menu").addEventListener("click", function (e) { e.stopPropagation(); });
+    // Results view wiring
+    $("results-back").addEventListener("click", function () {
+      show("view-workspace");
+      loadForms().catch(function () { setStatus("Could not refresh forms.", true); });
+    });
+    $("results-edit").addEventListener("click", function () {
+      loadFormIntoEditor(results.formId);
+    });
+    $("editor-results").addEventListener("click", function () {
+      if (editor.formId) openResults(editor.formId);
+    });
+    document.querySelectorAll(".range-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        results.days = parseInt(btn.getAttribute("data-days"), 10) || 7;
+        document.querySelectorAll(".range-btn").forEach(function (b) {
+          b.classList.toggle("active", b === btn);
+        });
+        loadAnalytics();
+      });
+    });
+    $("chart-table-toggle").addEventListener("click", function () {
+      results.chartMode = results.chartMode === "chart" ? "table" : "chart";
+      $("chart-table-toggle").textContent = results.chartMode === "chart" ? "Table" : "Chart";
+      renderChartArea();
+    });
+    $("status-filter").addEventListener("change", function () {
+      results.status = $("status-filter").value;
+      loadResponses(true);
+    });
+    $("load-more").addEventListener("click", function () { loadResponses(false); });
+    $("export-csv").addEventListener("click", function () { downloadExport("csv"); });
+    $("export-xlsx").addEventListener("click", function () { downloadExport("xlsx"); });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        $("new-form-menu").classList.add("hidden");
+        $("add-field-menu").classList.add("hidden");
+      }
+    });
+
     $("share-copy").addEventListener("click", function () {
       var link = location.origin + (editor.publishedUrl || "");
       var btn = $("share-copy");

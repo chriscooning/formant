@@ -25,15 +25,15 @@ Reuse the existing API-key scheme (Bearer token, SHA-256 hash stored per form as
 
 ## Phase Summary
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| **W1** | API: list / get / update forms | **complete** |
-| **W2** | Prebuilt renderer runtime artifact + form shell template | **complete** |
-| **W3** | Workspace shell: login, forms list (served at `/admin`) | **complete** |
-| **W4** | Create & edit: schema editor + live preview | **complete** |
-| **W5** | Publish & share: save, live URL, copy link | **complete** (embed snippet deferred to W7 polish) |
-| **W6** | Results tab: fold responses-dashboard into the workspace | pending |
-| **W7** | Vercel parity + polish (dark/light, keyboard nav) | pending |
+| Phase  | Description                                              | Status                                                                                                                |
+| ------ | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **W1** | API: list / get / update forms                           | **complete**                                                                                                          |
+| **W2** | Prebuilt renderer runtime artifact + form shell template | **complete**                                                                                                          |
+| **W3** | Workspace shell: login, forms list (served at `/admin`)  | **complete**                                                                                                          |
+| **W4** | Create & edit: schema editor + live preview              | **complete**                                                                                                          |
+| **W5** | Publish & share: save, live URL, copy link               | **complete** (embed snippet deferred to W7 polish)                                                                    |
+| **W6** | Results tab: fold responses-dashboard into the workspace | **complete**                                                                                                          |
+| **W7** | Vercel parity + polish (dark/light, keyboard nav)        | **complete** (Vercel serves /admin via the shared app; standalone responses-dashboard.html kept for existing deploys) |
 
 MVP path: **W1 → W2 → W3 → W5** (list + create-from-JSON/template + publish). W4's visual editor and W6 can follow.
 
@@ -48,6 +48,7 @@ The endpoints any workspace UI needs. All auth-required, owner-scoped via `api_k
 - `PUT /api/forms/:id` — update `html`, `schema`, or both; refreshes `title` from schema; 403 if not owner (same pattern as DELETE).
 
 **Files:**
+
 - `packages/service/src/db/interface.ts` — add `listFormsByApiKeyHash`, `updateForm` to `DbAdapter`.
 - `packages/service/src/db/queries.ts` + `d1-adapter.ts` — D1 implementations.
 - `packages/service/src/routes/forms.ts` — the three routes.
