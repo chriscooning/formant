@@ -80,6 +80,7 @@ The skill is in `.cursor/skills/formant/`.
 pnpm formant build schema.json -o forms/my-form.html   # build from JSON schema
 pnpm formant preview schema.json                        # build + open in browser
 pnpm formant deploy forms/my-form.html                  # deploy (interactive menu)
+pnpm build:runtime:embed                                # refresh the worker's embedded renderer runtime
 ```
 
 ## Contributing

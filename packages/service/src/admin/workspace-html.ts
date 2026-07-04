@@ -1561,11 +1561,12 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
 
       var tbody = el("tbody");
       results.rows.forEach(function (r) {
-        var answers = {};
-        try { answers = JSON.parse(r.answers_json || "{}"); } catch (_) {}
+        // API shape: { id, formId, status, answers: {…}, metadata, submittedAt }
+        var answers = r.answers || {};
         var tr = el("tr");
-        var when = new Date(r.submitted_at);
-        tr.appendChild(el("td", null, isNaN(when.getTime()) ? r.submitted_at : when.toLocaleString()));
+        var submittedAt = r.submittedAt || "";
+        var when = new Date(submittedAt.indexOf("T") === -1 ? submittedAt.replace(" ", "T") + "Z" : submittedAt);
+        tr.appendChild(el("td", null, isNaN(when.getTime()) ? submittedAt : when.toLocaleString()));
         if (showStatus) {
           var badge = el("td");
           badge.appendChild(el("span", "status-badge", r.status === "in_progress" ? "partial" : r.status));
