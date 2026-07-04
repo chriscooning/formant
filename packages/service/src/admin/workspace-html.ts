@@ -281,6 +281,35 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       color: var(--ff-text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .share-popover {
+      border-bottom: 1px solid var(--ff-border);
+      background: var(--ff-surface);
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .share-popover textarea {
+      flex: 1;
+      background: var(--ff-bg);
+      border: 1px solid var(--ff-border);
+      border-radius: 8px;
+      font-family: var(--ff-font-mono);
+      font-size: 11.5px;
+      line-height: 1.5;
+      padding: 10px;
+      outline: none;
+      resize: none;
+    }
+    .qr-box {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 6px;
+      line-height: 0;
+      display: inline-block;
+    }
+    .share-popover .pane-actions { display: flex; flex-direction: column; gap: 8px; }
     .editor-main {
       flex: 1;
       display: grid;
@@ -503,6 +532,20 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
     }
     .load-more-row { text-align: center; padding: 14px 0 0; }
     .results-empty { color: var(--ff-text-secondary); font-size: 14px; padding: 18px 0; }
+    .sheets-card {
+      background: var(--ff-surface);
+      border: 1px solid var(--ff-border);
+      border-radius: var(--ff-radius);
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .sheets-card .sheets-text { flex: 1; min-width: 220px; }
+    .sheets-card h3 { font-size: 14.5px; font-weight: 600; margin-bottom: 4px; }
+    .sheets-card p { color: var(--ff-text-secondary); font-size: 13px; }
+    .sheets-card .connected-mark { color: var(--ff-success); }
 
     @media (max-width: 760px) {
       .editor-main { grid-template-columns: 1fr; grid-template-rows: 45% 55%; }
@@ -579,6 +622,23 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       <span id="share-url" class="share-url"></span>
       <button id="share-copy" class="btn-ghost" type="button">Copy link</button>
       <a id="share-open" class="btn-ghost" target="_blank" rel="noopener">Open</a>
+      <button id="share-embed" class="btn-ghost" type="button">Embed</button>
+      <button id="share-qr" class="btn-ghost" type="button">QR</button>
+    </div>
+    <div id="share-popover" class="share-popover hidden">
+      <div id="embed-pane" class="hidden" style="display: contents;">
+        <textarea id="embed-code" readonly rows="3" spellcheck="false"></textarea>
+        <div class="pane-actions">
+          <button id="embed-copy" class="btn-ghost" type="button">Copy code</button>
+        </div>
+      </div>
+      <div id="qr-pane" class="hidden" style="display: contents;">
+        <span id="qr-box" class="qr-box"></span>
+        <div class="pane-actions">
+          <button id="qr-download" class="btn-ghost" type="button">Download SVG</button>
+          <span class="editor-status">Scan to open the form</span>
+        </div>
+      </div>
     </div>
     <div class="editor-main">
       <div class="editor-panel">
@@ -633,6 +693,9 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
             <div id="chart-tooltip" class="chart-tooltip"></div>
           </div>
           <div id="dropoff-line" class="results-empty hidden"></div>
+        </div>
+        <div class="results-section">
+          <div id="sheets-card" class="sheets-card hidden"></div>
         </div>
         <div class="results-section">
           <div class="responses-head">
@@ -813,11 +876,52 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
     // ── Share bar ──
     function renderShareBar() {
       var bar = $("share-bar");
+      closeSharePopover();
       if (!editor.publishedUrl) { bar.classList.add("hidden"); return; }
       var full = location.origin + editor.publishedUrl;
       $("share-url").textContent = full;
       $("share-open").href = editor.publishedUrl;
       bar.classList.remove("hidden");
+    }
+
+    var sharePane = null;
+    function closeSharePopover() {
+      sharePane = null;
+      $("share-popover").classList.add("hidden");
+      $("embed-pane").classList.add("hidden");
+      $("qr-pane").classList.add("hidden");
+    }
+    function toggleSharePane(pane) {
+      if (sharePane === pane) { closeSharePopover(); return; }
+      sharePane = pane;
+      $("share-popover").classList.remove("hidden");
+      $("embed-pane").classList.toggle("hidden", pane !== "embed");
+      $("qr-pane").classList.toggle("hidden", pane !== "qr");
+      if (pane === "embed") {
+        var title = ((editor.schema && editor.schema.title) || "Form").replace(/"/g, "&quot;");
+        $("embed-code").value =
+          '<iframe src="' + location.origin + editor.publishedUrl +
+          '" width="100%" height="620" style="border:none;border-radius:12px" title="' + title + '"></iframe>';
+      }
+      if (pane === "qr") loadQr();
+    }
+    var qrSvgText = null;
+    function loadQr() {
+      var box = $("qr-box");
+      box.innerHTML = "";
+      qrSvgText = null;
+      apiFetch("/api/forms/" + editor.formId + "/qr")
+        .then(function (res) {
+          if (!res.ok) throw new Error("QR failed (" + res.status + ")");
+          return res.text();
+        })
+        .then(function (svg) {
+          qrSvgText = svg;
+          box.innerHTML = svg;
+        })
+        .catch(function (err) {
+          box.textContent = err.message;
+        });
     }
 
     // ── Field list rendering ──
@@ -1168,6 +1272,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       $("chart-area").innerHTML = "";
       $("responses-area").innerHTML = "";
       $("dropoff-line").classList.add("hidden");
+      $("sheets-card").classList.add("hidden");
       show("view-results");
 
       apiFetch("/api/forms/" + formId)
@@ -1183,6 +1288,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           $("results-open").href = body.url;
           loadAnalytics();
           loadResponses(true);
+          loadSheetsStatus();
         })
         .catch(function (err) {
           $("analytics-status").textContent = err.message;
@@ -1478,6 +1584,159 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       $("load-more").classList.toggle("hidden", results.rows.length >= results.total);
     }
 
+    // ── Connect Google Sheet ──
+    var SHEETS_DOCS_URL = "https://github.com/chriscooning/formant/blob/main/docs/connect-google-sheet-local.md";
+    var sheetsConfigured = null;
+
+    function sheetUrlKey(formId) { return "formant_sheet_" + formId; }
+
+    function hasSheetsDestination(schema) {
+      var dests = (schema && schema.submit && schema.submit.destinations) || [];
+      return dests.some(function (d) { return d && d.type === "sheets"; });
+    }
+
+    function loadSheetsStatus() {
+      apiFetch("/api/connect-sheets/status")
+        .then(function (res) { return res.ok ? res.json() : { configured: false }; })
+        .then(function (body) {
+          sheetsConfigured = !!body.configured;
+          renderSheetsCard();
+        })
+        .catch(function () {
+          sheetsConfigured = false;
+          renderSheetsCard();
+        });
+    }
+
+    function renderSheetsCard() {
+      var card = $("sheets-card");
+      card.innerHTML = "";
+      if (sheetsConfigured === null || !results.schema) { card.classList.add("hidden"); return; }
+      card.classList.remove("hidden");
+
+      var text = el("div", "sheets-text");
+      var connected = hasSheetsDestination(results.schema);
+
+      if (connected) {
+        var h = el("h3");
+        h.appendChild(el("span", "connected-mark", "✓ "));
+        h.appendChild(document.createTextNode("Google Sheet connected"));
+        text.appendChild(h);
+        text.appendChild(el("p", null, "New responses are synced to your spreadsheet."));
+        card.appendChild(text);
+        var sheetUrl = null;
+        try { sheetUrl = localStorage.getItem(sheetUrlKey(results.formId)); } catch (_) {}
+        if (sheetUrl) {
+          var openSheet = el("a", "btn-ghost", "Open sheet");
+          openSheet.href = sheetUrl;
+          openSheet.target = "_blank";
+          openSheet.rel = "noopener";
+          card.appendChild(openSheet);
+        }
+        var reconnect = el("button", "btn-ghost", "Reconnect");
+        reconnect.type = "button";
+        reconnect.addEventListener("click", connectSheets);
+        card.appendChild(reconnect);
+        return;
+      }
+
+      text.appendChild(el("h3", null, "Connect a Google Sheet"));
+      text.appendChild(el("p", null, "Sync new responses to a spreadsheet you can share."));
+      card.appendChild(text);
+
+      if (sheetsConfigured) {
+        var connectBtn = el("button", "btn-primary", "Connect Google Sheet");
+        connectBtn.type = "button";
+        connectBtn.addEventListener("click", connectSheets);
+        card.appendChild(connectBtn);
+      } else {
+        var docsLink = el("a", "btn-ghost", "How to set up");
+        docsLink.href = SHEETS_DOCS_URL;
+        docsLink.target = "_blank";
+        docsLink.rel = "noopener";
+        card.appendChild(docsLink);
+      }
+    }
+
+    function connectSheets() {
+      apiFetch("/api/connect-sheets/init", {
+        method: "POST",
+        body: JSON.stringify({
+          redirect_uri: location.origin + location.pathname,
+          form_id: results.formId,
+          schema: results.schema
+        })
+      })
+        .then(function (res) {
+          return res.json().then(function (body) {
+            if (!res.ok) throw new Error(body.error || ("Connect failed (" + res.status + ")"));
+            return body;
+          });
+        })
+        .then(function (body) {
+          window.location.href = body.auth_url;
+        })
+        .catch(function (err) {
+          $("analytics-status").textContent = err.message;
+        });
+    }
+
+    // OAuth callback lands back on /admin with a hash fragment:
+    //   #url=<webAppUrl>&spreadsheetUrl=<...>&formId=<...>   (success)
+    //   #error=<code>[&message=...]                          (failure)
+    function parseSheetsCallback() {
+      var h = location.hash;
+      if (!h || h.length < 2) return null;
+      var params = new URLSearchParams(h.slice(1));
+      if (params.get("error")) {
+        history.replaceState(null, "", location.pathname);
+        return { error: params.get("error"), message: params.get("message") || "" };
+      }
+      if (params.get("url") && params.get("formId")) {
+        history.replaceState(null, "", location.pathname);
+        return {
+          url: params.get("url"),
+          spreadsheetUrl: params.get("spreadsheetUrl") || "",
+          formId: params.get("formId")
+        };
+      }
+      return null;
+    }
+
+    // Persist the new sheets destination into the form schema (the server
+    // reassembles the form HTML), then open Results in the connected state.
+    function completeSheetsConnection(cb) {
+      if (cb.error) {
+        setStatus("Google Sheet connection failed: " + cb.error + (cb.message ? " — " + cb.message : ""), true);
+        return;
+      }
+      try { localStorage.setItem(sheetUrlKey(cb.formId), cb.spreadsheetUrl); } catch (_) {}
+      apiFetch("/api/forms/" + cb.formId)
+        .then(function (res) {
+          if (!res.ok) throw new Error("Could not load form (" + res.status + ")");
+          return res.json();
+        })
+        .then(function (body) {
+          var schema = body.schema || {};
+          var submit = schema.submit || {};
+          var dests = (submit.destinations || []).filter(function (d) { return !d || d.type !== "sheets"; });
+          dests.push({ type: "sheets", url: cb.url });
+          schema.submit = submit;
+          submit.destinations = dests;
+          return apiFetch("/api/forms/" + cb.formId, {
+            method: "PUT",
+            body: JSON.stringify({ schema: schema })
+          });
+        })
+        .then(function (res) {
+          if (!res.ok) throw new Error("Could not save sheet connection (" + res.status + ")");
+          openResults(cb.formId);
+        })
+        .catch(function (err) {
+          setStatus(err.message, true);
+        });
+    }
+
     // ── Exports ──
     function downloadExport(format) {
       apiFetch("/api/responses/" + results.formId + "/" + format)
@@ -1743,6 +2002,29 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       }
     });
 
+    $("share-embed").addEventListener("click", function () { toggleSharePane("embed"); });
+    $("share-qr").addEventListener("click", function () { toggleSharePane("qr"); });
+    $("embed-copy").addEventListener("click", function () {
+      var btn = $("embed-copy");
+      var done = function () {
+        btn.textContent = "Copied ✓";
+        setTimeout(function () { btn.textContent = "Copy code"; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText($("embed-code").value).then(done, done);
+      } else { done(); }
+    });
+    $("qr-download").addEventListener("click", function () {
+      if (!qrSvgText) return;
+      var blob = new Blob([qrSvgText], { type: "image/svg+xml" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = ((editor.schema && editor.schema.title) || "form").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-qr.svg";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+
     $("share-copy").addEventListener("click", function () {
       var link = location.origin + (editor.publishedUrl || "");
       var btn = $("share-copy");
@@ -1759,10 +2041,12 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
 
     // ── Boot ──
     var storedKey = apiKey();
+    var sheetsCallback = parseSheetsCallback();
     if (storedKey) {
       show("view-workspace");
       setStatus("Loading your forms…", false);
       signIn(storedKey, true);
+      if (sheetsCallback) completeSheetsConnection(sheetsCallback);
     } else {
       show("view-login");
     }

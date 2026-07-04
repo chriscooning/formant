@@ -292,6 +292,45 @@ describe("DELETE /api/forms/:id", () => {
   });
 });
 
+// ─── GET /api/forms/:id/qr ───
+
+describe("GET /api/forms/:id/qr", () => {
+  it("returns an SVG QR code for the form URL", async () => {
+    const { body: createBody } = await createForm();
+    const formId = createBody.id as string;
+
+    const res = await SELF.fetch(`http://localhost/api/forms/${formId}/qr`, {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("image/svg+xml");
+    const svg = await res.text();
+    expect(svg).toContain("<svg");
+    expect(svg).toContain("crispEdges");
+    expect(svg).toContain("<rect");
+  });
+
+  it("returns 403 with wrong API key", async () => {
+    const { body: createBody } = await createForm(API_KEY);
+    const res = await SELF.fetch(`http://localhost/api/forms/${createBody.id}/qr`, {
+      headers: { Authorization: `Bearer ${OTHER_API_KEY}` },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for nonexistent form and 401 without auth", async () => {
+    const missing = await SELF.fetch("http://localhost/api/forms/nonexistent1/qr", {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+    expect(missing.status).toBe(404);
+
+    const { body: createBody } = await createForm();
+    const noAuth = await SELF.fetch(`http://localhost/api/forms/${createBody.id}/qr`);
+    expect(noAuth.status).toBe(401);
+  });
+});
+
 // ─── GET /api/forms (list) ───
 
 describe("GET /api/forms", () => {

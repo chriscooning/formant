@@ -3,6 +3,7 @@ import type { AppEnv } from "../types";
 import { requireAuth } from "../middleware/auth";
 import { generateFormId } from "../utils/id";
 import { assembleHostedFormHTML, withServiceDestination } from "../utils/assemble-form";
+import { qrSvg } from "../utils/qr-svg";
 
 const formsApp = new Hono<AppEnv>();
 
@@ -116,6 +117,28 @@ formsApp.get("/api/forms/:id", requireAuth(), async (c) => {
     updated_at: form.updated_at,
     view_count: form.view_count,
     submit_count: form.submit_count,
+  });
+});
+
+// ─── GET /api/forms/:id/qr — QR code SVG for the form's public URL (auth required) ───
+
+formsApp.get("/api/forms/:id/qr", requireAuth(), async (c) => {
+  const id = c.req.param("id");
+  const apiKeyHash = c.get("apiKeyHash");
+
+  const form = await c.env.db.getFormById(id);
+  if (!form) {
+    return c.json({ error: "Form not found" }, 404);
+  }
+  if (form.api_key_hash !== apiKeyHash) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const origin = new URL(c.req.url).origin;
+  const svg = qrSvg(`${origin}/f/${id}`);
+  return c.body(svg, 200, {
+    "Content-Type": "image/svg+xml",
+    "Cache-Control": "no-store",
   });
 });
 
