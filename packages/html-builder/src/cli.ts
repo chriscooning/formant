@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
-import { buildFormHTML } from "./build";
+import { buildFormHTML, buildRuntimeJS } from "./build";
 import { buildAdminHTML, hashAdminPassword } from "./buildLocal";
 import type { FormSchema } from "@formant/core";
 
@@ -21,13 +21,15 @@ function usage(): void {
 
   Usage:
     formant build <schema.json> [-o <output.html>] [--no-minify] [--inline] [--local]
+    formant build-runtime [-o <output.js>] [--no-minify]
     formant preview <schema.json> [--no-minify] [--inline]
     formant deploy <form.html> [--target offline|vercel|cloudflare]
 
   Commands:
-    build     Compile a schema JSON file into a standalone HTML form
-    preview   Build and immediately open in the default browser
-    deploy    Deploy a built form (interactive menu or --target to skip)
+    build          Compile a schema JSON file into a standalone HTML form
+    build-runtime  Bundle the schema-independent runtime JS artifact
+    preview        Build and immediately open in the default browser
+    deploy         Deploy a built form (interactive menu or --target to skip)
 
   Options:
     -o, --output <file>   Output path (default: <schema-name>.html next to the JSON)
@@ -110,8 +112,7 @@ function ensureLocalDestination(schema: FormSchema): FormSchema {
 }
 
 function buildForm(argv: string[]): string {
-  const { schemaPath, output, minify, inline, local, adminPassword } =
-    parseArgs(argv);
+  const { schemaPath, output, minify, inline, local, adminPassword } = parseArgs(argv);
 
   const resolved = path.resolve(schemaPath);
   if (!fs.existsSync(resolved)) {
@@ -129,8 +130,7 @@ function buildForm(argv: string[]): string {
   }
 
   if (local) {
-    const password =
-      adminPassword ?? process.env.FORMANT_ADMIN_PASSWORD ?? null;
+    const password = adminPassword ?? process.env.FORMANT_ADMIN_PASSWORD ?? null;
     if (!password) {
       console.error(
         "Error: --local requires admin password. Set FORMANT_ADMIN_PASSWORD or use --admin-password <p>",
@@ -149,9 +149,7 @@ function buildForm(argv: string[]): string {
   });
 
   // Determine output path
-  const outPath = output
-    ? path.resolve(output)
-    : resolved.replace(/\.json$/, ".html");
+  const outPath = output ? path.resolve(output) : resolved.replace(/\.json$/, ".html");
 
   // Ensure output directory exists
   const outDir = path.dirname(outPath);
@@ -172,8 +170,7 @@ function buildForm(argv: string[]): string {
   console.log(`Done — ${sizeKB} KB written to ${outPath}`);
 
   if (local) {
-    const adminPasswordResolved =
-      adminPassword ?? process.env.FORMANT_ADMIN_PASSWORD ?? "";
+    const adminPasswordResolved = adminPassword ?? process.env.FORMANT_ADMIN_PASSWORD ?? "";
     const adminHash = hashAdminPassword(adminPasswordResolved);
     const adminSchema = schema as FormSchema;
     const formantApiUrl = process.env.FORMANT_API_URL ?? "";
@@ -192,6 +189,41 @@ function buildForm(argv: string[]): string {
 switch (command) {
   case "build": {
     buildForm(args.slice(1));
+    break;
+  }
+
+  case "build-runtime": {
+    const runtimeArgs = args.slice(1);
+    let output: string | null = null;
+    let minify = true;
+    for (let i = 0; i < runtimeArgs.length; i++) {
+      const arg = runtimeArgs[i]!;
+      if (arg === "-o" || arg === "--output") {
+        output = runtimeArgs[++i] ?? null;
+        if (!output) {
+          console.error("Error: -o/--output requires a file path argument");
+          process.exit(1);
+        }
+      } else if (arg === "--no-minify") {
+        minify = false;
+      }
+    }
+
+    const outPath = output
+      ? path.resolve(output)
+      : path.resolve(__dirname, "../dist/formant-runtime.js");
+
+    console.log("Bundling schema-independent runtime...");
+    const runtimeJs = buildRuntimeJS({ minify });
+
+    const outDir = path.dirname(outPath);
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true });
+    }
+    fs.writeFileSync(outPath, runtimeJs);
+
+    const sizeKB = (Buffer.byteLength(runtimeJs) / 1024).toFixed(1);
+    console.log(`Done — ${sizeKB} KB written to ${outPath}`);
     break;
   }
 
@@ -215,11 +247,11 @@ switch (command) {
 
   case "deploy": {
     // Delegate to scripts/deploy.sh, forwarding all remaining args
-    const deployScript = path.resolve(
-      __dirname,
-      "../../../scripts/deploy.sh",
-    );
-    const deployArgs = args.slice(1).map((a) => JSON.stringify(a)).join(" ");
+    const deployScript = path.resolve(__dirname, "../../../scripts/deploy.sh");
+    const deployArgs = args
+      .slice(1)
+      .map((a) => JSON.stringify(a))
+      .join(" ");
     try {
       execSync(`bash ${JSON.stringify(deployScript)} ${deployArgs}`, {
         stdio: "inherit",
