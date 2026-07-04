@@ -1,7 +1,7 @@
 // ─── Database Row Types ───
 // Re-export from interface for backward compatibility
-import type { FormRow, ResponseRow } from "./interface";
-export type { FormRow, ResponseRow, AnalyticsResult } from "./interface";
+import type { FormRow, FormSummaryRow, ResponseRow } from "./interface";
+export type { FormRow, FormSummaryRow, ResponseRow, AnalyticsResult } from "./interface";
 
 // ─── Form Queries ───
 
@@ -20,35 +20,67 @@ export async function insertForm(
       `INSERT INTO forms (id, title, html, schema_json, api_key_hash)
        VALUES (?, ?, ?, ?, ?)`,
     )
-    .bind(
-      params.id,
-      params.title,
-      params.html,
-      params.schemaJson,
-      params.apiKeyHash,
-    )
+    .bind(params.id, params.title, params.html, params.schemaJson, params.apiKeyHash)
     .run();
 
-  const row = await db
-    .prepare("SELECT * FROM forms WHERE id = ?")
-    .bind(params.id)
-    .first<FormRow>();
+  const row = await db.prepare("SELECT * FROM forms WHERE id = ?").bind(params.id).first<FormRow>();
 
   if (!row) throw new Error("Failed to insert form");
   return row;
 }
 
-export async function getFormById(
-  db: D1Database,
-  id: string,
-): Promise<FormRow | null> {
+export async function getFormById(db: D1Database, id: string): Promise<FormRow | null> {
   return db.prepare("SELECT * FROM forms WHERE id = ?").bind(id).first<FormRow>();
 }
 
-export async function incrementViewCount(
+export async function listFormsByApiKeyHash(
   db: D1Database,
-  id: string,
-): Promise<void> {
+  apiKeyHash: string,
+): Promise<FormSummaryRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT id, title, created_at, updated_at, view_count, submit_count
+       FROM forms WHERE api_key_hash = ? ORDER BY created_at DESC`,
+    )
+    .bind(apiKeyHash)
+    .all<FormSummaryRow>();
+  return results ?? [];
+}
+
+export async function updateForm(
+  db: D1Database,
+  params: {
+    id: string;
+    title?: string | null;
+    html?: string;
+    schemaJson?: string;
+  },
+): Promise<FormRow | null> {
+  const sets: string[] = [];
+  const binds: (string | null)[] = [];
+  if (params.title !== undefined) {
+    sets.push("title = ?");
+    binds.push(params.title);
+  }
+  if (params.html !== undefined) {
+    sets.push("html = ?");
+    binds.push(params.html);
+  }
+  if (params.schemaJson !== undefined) {
+    sets.push("schema_json = ?");
+    binds.push(params.schemaJson);
+  }
+  if (sets.length > 0) {
+    sets.push("updated_at = datetime('now')");
+    await db
+      .prepare(`UPDATE forms SET ${sets.join(", ")} WHERE id = ?`)
+      .bind(...binds, params.id)
+      .run();
+  }
+  return getFormById(db, params.id);
+}
+
+export async function incrementViewCount(db: D1Database, id: string): Promise<void> {
   await db
     .prepare(
       "UPDATE forms SET view_count = view_count + 1, updated_at = datetime('now') WHERE id = ?",
@@ -57,10 +89,7 @@ export async function incrementViewCount(
     .run();
 }
 
-export async function incrementViewCountDaily(
-  db: D1Database,
-  formId: string,
-): Promise<void> {
+export async function incrementViewCountDaily(db: D1Database, formId: string): Promise<void> {
   await db
     .prepare(
       `INSERT INTO form_views_daily (form_id, date, views) VALUES (?, date('now'), 1)
@@ -70,10 +99,7 @@ export async function incrementViewCountDaily(
     .run();
 }
 
-export async function incrementSubmitCount(
-  db: D1Database,
-  id: string,
-): Promise<void> {
+export async function incrementSubmitCount(db: D1Database, id: string): Promise<void> {
   await db
     .prepare(
       "UPDATE forms SET submit_count = submit_count + 1, updated_at = datetime('now') WHERE id = ?",
@@ -82,17 +108,11 @@ export async function incrementSubmitCount(
     .run();
 }
 
-export async function deleteForm(
-  db: D1Database,
-  id: string,
-): Promise<boolean> {
+export async function deleteForm(db: D1Database, id: string): Promise<boolean> {
   // Delete responses first, then the form
   await db.prepare("DELETE FROM responses WHERE form_id = ?").bind(id).run();
 
-  const result = await db
-    .prepare("DELETE FROM forms WHERE id = ?")
-    .bind(id)
-    .run();
+  const result = await db.prepare("DELETE FROM forms WHERE id = ?").bind(id).run();
 
   return result.meta.changes > 0;
 }
@@ -118,14 +138,7 @@ export async function insertResponse(
       `INSERT INTO responses (id, form_id, answers_json, metadata_json, status, session_id)
        VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind(
-      params.id,
-      params.formId,
-      params.answersJson,
-      params.metadataJson,
-      status,
-      sessionId,
-    )
+    .bind(params.id, params.formId, params.answersJson, params.metadataJson, status, sessionId)
     .run();
 
   const row = await db
@@ -160,13 +173,7 @@ export async function updateResponse(
       `UPDATE responses SET answers_json = ?, metadata_json = ?, status = ?, updated_at = datetime('now')
        WHERE id = ? AND form_id = ?`,
     )
-    .bind(
-      params.answersJson,
-      params.metadataJson,
-      params.status,
-      params.id,
-      params.formId,
-    )
+    .bind(params.answersJson, params.metadataJson, params.status, params.id, params.formId)
     .run();
 
   return { updated: true };
@@ -186,8 +193,7 @@ export async function getResponsesByFormId(
   const offset = options.offset ?? 0;
 
   let query = "SELECT * FROM responses WHERE form_id = ?";
-  let countQuery =
-    "SELECT COUNT(*) as total FROM responses WHERE form_id = ?";
+  let countQuery = "SELECT COUNT(*) as total FROM responses WHERE form_id = ?";
   const bindings: (string | number)[] = [formId];
   const countBindings: (string | number)[] = [formId];
 
@@ -246,13 +252,7 @@ export async function insertOAuthSession(
       `INSERT INTO oauth_sessions (state, form_id, schema_json, redirect_uri, code_verifier)
        VALUES (?, ?, ?, ?, ?)`,
     )
-    .bind(
-      params.state,
-      params.formId,
-      params.schemaJson,
-      params.redirectUri,
-      params.codeVerifier,
-    )
+    .bind(params.state, params.formId, params.schemaJson, params.redirectUri, params.codeVerifier)
     .run();
 }
 
@@ -289,10 +289,7 @@ export async function getAndDeleteOAuthSession(
   };
 }
 
-export async function getResponseCount(
-  db: D1Database,
-  formId: string,
-): Promise<number> {
+export async function getResponseCount(db: D1Database, formId: string): Promise<number> {
   const result = await db
     .prepare("SELECT COUNT(*) as total FROM responses WHERE form_id = ?")
     .bind(formId)
@@ -307,9 +304,7 @@ export async function getAllResponsesForExport(
 ): Promise<ResponseRow[]> {
   const status = options?.status ?? "completed";
   const result = await db
-    .prepare(
-      "SELECT * FROM responses WHERE form_id = ? AND status = ? ORDER BY submitted_at ASC",
-    )
+    .prepare("SELECT * FROM responses WHERE form_id = ? AND status = ? ORDER BY submitted_at ASC")
     .bind(formId, status)
     .all<ResponseRow>();
   return result.results;
@@ -331,10 +326,7 @@ export async function getAnalytics(
 
   const dateMod = `-${days} days`;
   const startDate = (
-    await db
-      .prepare("SELECT date('now', ?) as d")
-      .bind(dateMod)
-      .first<{ d: string }>()
+    await db.prepare("SELECT date('now', ?) as d").bind(dateMod).first<{ d: string }>()
   )?.d;
 
   if (!startDate) {
@@ -378,8 +370,7 @@ export async function getAnalytics(
   const completedCount = completedInRange?.n ?? 0;
   const partialCount = partialsInRange?.n ?? 0;
   const totalStarted = completedCount + partialCount;
-  const completionRate =
-    totalStarted > 0 ? (completedCount / totalStarted) * 100 : 0;
+  const completionRate = totalStarted > 0 ? (completedCount / totalStarted) * 100 : 0;
 
   // Avg duration from completed in range
   const durationRows = await db
@@ -429,9 +420,7 @@ export async function getAnalytics(
   for (const r of submissionsByDate.results) subsMap.set(r.date, r.n);
 
   const series: { date: string; views: number; submissions: number }[] = [];
-  const today = (
-    await db.prepare("SELECT date('now') as d").first<{ d: string }>()
-  )?.d;
+  const today = (await db.prepare("SELECT date('now') as d").first<{ d: string }>())?.d;
   if (today) {
     const start = new Date(startDate);
     const end = new Date(today);

@@ -4,11 +4,20 @@ import { formsApp } from "./routes/forms";
 import { responsesApp } from "./routes/responses";
 import { exportApp } from "./routes/export";
 import { connectSheetsApp } from "./routes/connect-sheets";
+import { adminApp } from "./routes/admin";
+import { previewApp } from "./routes/preview";
+import { generateApp } from "./routes/generate";
 import type { AppEnv } from "./types";
 
 // Re-export types for consumer convenience
 export type { Bindings, Variables, AppEnv } from "./types";
-export type { DbAdapter, FormRow, ResponseRow, AnalyticsResult } from "./db/interface";
+export type {
+  DbAdapter,
+  FormRow,
+  FormSummaryRow,
+  ResponseRow,
+  AnalyticsResult,
+} from "./db/interface";
 export { D1Adapter } from "./db/d1-adapter";
 export { hashApiKey } from "./middleware/auth";
 
@@ -27,5 +36,8 @@ app.route("/", formsApp);
 app.route("/", responsesApp);
 app.route("/", exportApp);
 app.route("/", connectSheetsApp);
+app.route("/", adminApp);
+app.route("/", previewApp);
+app.route("/", generateApp);
 
 export default app;

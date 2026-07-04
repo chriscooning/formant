@@ -17,7 +17,8 @@ const __dirname = path.dirname(__filename);
 // The jsx-runtime shim adapts the automatic JSX transform's jsx()/jsxs()
 // calls to React.createElement, which is what the UMD CDN build exposes.
 
-const requireShim = `var require=function(m){` +
+const requireShim =
+  `var require=function(m){` +
   `var R=window.React,D=window.ReactDOM;` +
   `var j={jsx:function(t,p,k){if(k!==void 0){var n={};for(var i in p)n[i]=p[i];n.key=k;return R.createElement(t,n)}return R.createElement(t,p)},` +
   `jsxs:function(t,p,k){if(k!==void 0){var n={};for(var i in p)n[i]=p[i];n.key=k;return R.createElement(t,n)}return R.createElement(t,p)},` +
@@ -36,21 +37,17 @@ export interface BuildOptions {
   inline?: boolean;
 }
 
-export function buildFormHTML(
-  schema: FormSchema,
-  options?: BuildOptions,
-): string {
-  // 1. Validate the schema
-  const errors = validateSchema(schema);
-  if (errors.length > 0) {
-    throw new Error(`Invalid schema:\n${errors.join("\n")}`);
-  }
-
+/**
+ * Bundle the renderer into a schema-independent runtime IIFE.
+ * The bundle reads window.__FORMANT_SCHEMA__ at load time, so the same
+ * runtime works for every form — build it once, inject schemas cheaply
+ * (see assembleFormHTML in assemble.ts).
+ */
+export function buildRuntimeJS(options?: { minify?: boolean }): string {
   const minify = options?.minify ?? true;
-  const inline = options?.inline ?? false;
 
-  // 2. Create the browser entry point that mounts the Formant component.
-  //    __FORMANT_SCHEMA__ is a var declared in the HTML before this IIFE runs.
+  // Create the browser entry point that mounts the Formant component.
+  // __FORMANT_SCHEMA__ is a var declared in the HTML before this IIFE runs.
   const rendererDir = path.resolve(__dirname, "../../renderer/src");
 
   const entryCode = `
@@ -71,9 +68,9 @@ if (container) {
 }
 `;
 
-  // 3. Bundle renderer + core into a single IIFE.
-  //    React and ReactDOM are externalised — they come from CDN script tags.
-  //    The banner shim maps require("react") etc. to window globals.
+  // Bundle renderer + core into a single IIFE.
+  // React and ReactDOM are externalised — they come from CDN script tags.
+  // The banner shim maps require("react") etc. to window globals.
   const result = buildSync({
     stdin: {
       contents: entryCode,
@@ -98,9 +95,23 @@ if (container) {
     },
   });
 
-  const bundledJS = result.outputFiles[0]!.text;
+  return result.outputFiles[0]!.text;
+}
 
-  // 4. Generate the final HTML
+export function buildFormHTML(schema: FormSchema, options?: BuildOptions): string {
+  // 1. Validate the schema
+  const errors = validateSchema(schema);
+  if (errors.length > 0) {
+    throw new Error(`Invalid schema:\n${errors.join("\n")}`);
+  }
+
+  const minify = options?.minify ?? true;
+  const inline = options?.inline ?? false;
+
+  // 2. Bundle the schema-independent runtime
+  const bundledJS = buildRuntimeJS({ minify });
+
+  // 3. Generate the final HTML
   const schemaJSON = JSON.stringify(schema);
   return htmlTemplate({
     bundledJS,

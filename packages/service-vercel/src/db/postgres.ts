@@ -5,6 +5,7 @@ import { sql } from "@vercel/postgres";
 import type {
   DbAdapter,
   FormRow,
+  FormSummaryRow,
   ResponseRow,
   AnalyticsResult,
 } from "@formant/service";
@@ -59,6 +60,44 @@ export class PostgresAdapter implements DbAdapter {
     const r = rows[0];
     if (!r) return null;
     return rowToFormRow(r as Record<string, unknown>);
+  }
+
+  async listFormsByApiKeyHash(apiKeyHash: string): Promise<FormSummaryRow[]> {
+    const { rows } = await sql`
+      SELECT id, title, created_at, updated_at, view_count, submit_count
+      FROM forms WHERE api_key_hash = ${apiKeyHash} ORDER BY created_at DESC
+    `;
+    return rows.map((r) => ({
+      id: String(r.id),
+      title: r.title != null ? String(r.title) : null,
+      created_at: String(r.created_at),
+      updated_at: String(r.updated_at),
+      view_count: Number(r.view_count) || 0,
+      submit_count: Number(r.submit_count) || 0,
+    }));
+  }
+
+  async updateForm(params: {
+    id: string;
+    title?: string | null;
+    html?: string;
+    schemaJson?: string;
+  }): Promise<FormRow | null> {
+    if (
+      params.title !== undefined ||
+      params.html !== undefined ||
+      params.schemaJson !== undefined
+    ) {
+      await sql`
+        UPDATE forms SET
+          title = CASE WHEN ${params.title !== undefined} THEN ${params.title ?? null} ELSE title END,
+          html = COALESCE(${params.html ?? null}, html),
+          schema_json = COALESCE(${params.schemaJson ?? null}, schema_json),
+          updated_at = NOW()
+        WHERE id = ${params.id}
+      `;
+    }
+    return this.getFormById(params.id);
   }
 
   async incrementViewCount(id: string): Promise<void> {
@@ -190,10 +229,7 @@ export class PostgresAdapter implements DbAdapter {
     return (rows as Record<string, unknown>[]).map(rowToResponseRow);
   }
 
-  async getAnalytics(
-    formId: string,
-    days: 7 | 14 | 30,
-  ): Promise<AnalyticsResult> {
+  async getAnalytics(formId: string, days: 7 | 14 | 30): Promise<AnalyticsResult> {
     const form = await this.getFormById(formId);
     if (!form) throw new Error("Form not found");
 
@@ -233,8 +269,7 @@ export class PostgresAdapter implements DbAdapter {
     const completedCount = (completedRes.rows[0] as { n: number })?.n ?? 0;
     const partialCount = (partialsRes.rows[0] as { n: number })?.n ?? 0;
     const totalStarted = completedCount + partialCount;
-    const completionRate =
-      totalStarted > 0 ? (completedCount / totalStarted) * 100 : 0;
+    const completionRate = totalStarted > 0 ? (completedCount / totalStarted) * 100 : 0;
 
     const durationRes = await sql`
       SELECT metadata_json FROM responses
@@ -343,9 +378,7 @@ export class PostgresAdapter implements DbAdapter {
     `;
   }
 
-  async getAndDeleteOAuthSession(
-    state: string,
-  ): Promise<{
+  async getAndDeleteOAuthSession(state: string): Promise<{
     formId: string;
     schemaJson: string;
     redirectUri: string;

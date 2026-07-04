@@ -34,6 +34,8 @@ function createMockAdapter(overrides?: Partial<DbAdapter>): DbAdapter {
   return {
     insertForm: async () => MOCK_FORM,
     getFormById: async (id) => (id === MOCK_FORM.id ? MOCK_FORM : null),
+    listFormsByApiKeyHash: async () => [],
+    updateForm: async () => MOCK_FORM,
     incrementViewCount: async () => {},
     incrementViewCountDaily: async () => {},
     incrementSubmitCount: async () => {},
@@ -91,11 +93,7 @@ describe("DbAdapter interface (mock)", () => {
       db: mockDb,
     };
 
-    const res = await app.fetch(
-      new Request("http://localhost/f/nonexistent"),
-      env,
-      executionCtx,
-    );
+    const res = await app.fetch(new Request("http://localhost/f/nonexistent"), env, executionCtx);
 
     expect(res.status).toBe(404);
   });
@@ -107,11 +105,7 @@ describe("DbAdapter interface (mock)", () => {
       db: mockDb,
     };
 
-    const res = await app.fetch(
-      new Request("http://localhost/api/health"),
-      env,
-      executionCtx,
-    );
+    const res = await app.fetch(new Request("http://localhost/api/health"), env, executionCtx);
 
     expect(res.status).toBe(200);
     expect((await res.json()) as { status: string }).toEqual({ status: "ok" });

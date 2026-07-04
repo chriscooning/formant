@@ -4,7 +4,7 @@
 
 Generate beautiful, self-contained HTML forms from natural language. Clone the repo, open it in Cursor, and describe what you want. The AI generates the schema, builds a single HTML file, and helps you deploy.
 
-Forms are **self-contained single HTML files** — work anywhere (email, local, hosted). No backend required, webhooks work out of the box. Add Cloudflare or Vercel when you need server-side storage, link responses into a Google sheet to share with others. 
+Forms are **self-contained single HTML files** — work anywhere (email, local, hosted). No backend required, webhooks work out of the box. Add Cloudflare or Vercel when you need server-side storage, link responses into a Google sheet to share with others.
 
 Respondents answer one question at a time, dark/light mode, keyboard navigation. Exactly like that one form builder you used to know 😉 Now AI-native and built for the agentic era.
 
@@ -31,11 +31,11 @@ Then in Cursor chat, try one of these prompts. The AI generates the schema, buil
 
 ## Deploy
 
-| Goal | Command |
-|------|---------|
-| **Share with others** (recommended) | `pnpm formant deploy forms/my-form.html --target cloudflare` |
-| **Preview locally** | `pnpm formant deploy forms/my-form.html --target offline` |
-| **Vercel + Postgres** | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
+| Goal                                | Command                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------- |
+| **Share with others** (recommended) | `pnpm formant deploy forms/my-form.html --target cloudflare`            |
+| **Preview locally**                 | `pnpm formant deploy forms/my-form.html --target offline`               |
+| **Vercel + Postgres**               | `pnpm formant deploy forms/my-form.html --target vercel --with-backend` |
 
 Cloudflare includes database and dashboard with one command.
 Vercel + Postgres needs a one-time DB setup — see [setup-vercel-postgres](docs/setup-vercel-postgres.md).
@@ -43,6 +43,20 @@ Vercel + Postgres needs a one-time DB setup — see [setup-vercel-postgres](docs
 All options: [docs/deploy-options](docs/deploy-options.md).
 
 Run `pnpm formant deploy forms/my-form.html` for an interactive menu. Use `pnpm formant deploy` — `pnpm deploy` is pnpm's built-in.
+
+## Workspace (hosted admin)
+
+Once a backend is deployed (Cloudflare or Vercel), open **`/admin`** on your worker URL and sign in with your API key. From the browser you can:
+
+- **See all your forms** with response and view counts
+- **Create forms with AI** — describe the form in plain English (needs an Anthropic API key on the backend: `wrangler secret put ANTHROPIC_API_KEY`)
+- **Create forms** from templates (blank, feedback, NPS) or by pasting an AI-generated schema
+- **Edit with a live preview** — the preview pane is the real form
+- **Publish with one click** — responses automatically flow to your backend
+- **Share your form** — copy the live link, download a QR code, or grab an embed snippet
+- **View results** — analytics (views, submissions, completion rate, drop-off), a responses table, CSV/Excel export, and Connect Google Sheet
+
+Forms created in the editor and forms deployed via the CLI live side by side. If you change the renderer, regenerate the embedded runtime with `pnpm build:runtime:embed` before redeploying the worker.
 
 ## Skill (Cursor / Claude Code)
 
@@ -54,13 +68,13 @@ The skill is in `.cursor/skills/formant/`.
 
 ## Docs
 
-| Topic | File |
-|-------|------|
-| Deploy options (all targets) | [docs/deploy-options](docs/deploy-options.md) |
-| Vercel + Postgres setup | [docs/setup-vercel-postgres](docs/setup-vercel-postgres.md) |
-| Cloudflare D1 (when deploy fails) | [docs/setup-cloudflare-d1](docs/setup-cloudflare-d1.md) |
-| Connect Google Sheet | [docs/connect-google-sheet-local](docs/connect-google-sheet-local.md) |
-| Contributing | [CONTRIBUTING](CONTRIBUTING.md) |
+| Topic                             | File                                                                  |
+| --------------------------------- | --------------------------------------------------------------------- |
+| Deploy options (all targets)      | [docs/deploy-options](docs/deploy-options.md)                         |
+| Vercel + Postgres setup           | [docs/setup-vercel-postgres](docs/setup-vercel-postgres.md)           |
+| Cloudflare D1 (when deploy fails) | [docs/setup-cloudflare-d1](docs/setup-cloudflare-d1.md)               |
+| Connect Google Sheet              | [docs/connect-google-sheet-local](docs/connect-google-sheet-local.md) |
+| Contributing                      | [CONTRIBUTING](CONTRIBUTING.md)                                       |
 
 ## Manual CLI
 
@@ -68,6 +82,7 @@ The skill is in `.cursor/skills/formant/`.
 pnpm formant build schema.json -o forms/my-form.html   # build from JSON schema
 pnpm formant preview schema.json                        # build + open in browser
 pnpm formant deploy forms/my-form.html                  # deploy (interactive menu)
+pnpm build:runtime:embed                                # refresh the worker's embedded renderer runtime
 ```
 
 ## Contributing

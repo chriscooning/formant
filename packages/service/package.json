@@ -11,16 +11,19 @@
     "db:migrate:local": "wrangler d1 execute formant-db --local --file=src/db/schema.sql"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@formant/core": "workspace:*",
+    "@formant/html-builder": "workspace:*",
     "hono": "latest",
     "nanoid": "latest",
+    "qrcode-generator": "^2.0.4",
     "xlsx": "latest"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "latest",
+    "@cloudflare/workers-types": "latest",
     "typescript": "^5.7",
     "vitest": "^3",
-    "wrangler": "latest",
-    "@cloudflare/vitest-pool-workers": "latest",
-    "@cloudflare/workers-types": "latest"
+    "wrangler": "latest"
   }
 }

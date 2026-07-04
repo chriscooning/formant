@@ -10,6 +10,10 @@ export type Bindings = {
   /** Google OAuth for Connect Google Sheet (optional) */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  /** Anthropic API key for Create with AI in the workspace (optional) */
+  ANTHROPIC_API_KEY?: string;
+  /** Override the Claude model used for form generation (optional) */
+  ANTHROPIC_MODEL?: string;
 };
 
 export type Variables = {
