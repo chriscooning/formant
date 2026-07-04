@@ -7,14 +7,13 @@ import { PostgresAdapter } from "./db/postgres";
 const db = new PostgresAdapter();
 
 export function createHandler() {
-  return async (
-    req: Request,
-    ctx?: { waitUntil?: (p: Promise<unknown>) => void },
-  ) => {
+  return async (req: Request, ctx?: { waitUntil?: (p: Promise<unknown>) => void }) => {
     const env = {
       db,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
       GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+      ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL,
     };
     const executionCtx: ExecutionContext = ctx
       ? {

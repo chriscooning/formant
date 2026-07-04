@@ -11,6 +11,7 @@
     "db:migrate:local": "wrangler d1 execute formant-db --local --file=src/db/schema.sql"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@formant/core": "workspace:*",
     "@formant/html-builder": "workspace:*",
     "hono": "latest",

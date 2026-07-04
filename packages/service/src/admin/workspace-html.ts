@@ -153,6 +153,23 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       padding: 8px 10px;
     }
     .menu button:hover { background: var(--ff-surface-hover); }
+    .copy-toast {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 90vw;
+      overflow-wrap: anywhere;
+      background: var(--ff-surface);
+      border: 1px solid var(--ff-border-hover);
+      border-radius: 12px;
+      color: var(--ff-text);
+      font-family: var(--ff-font-mono);
+      font-size: 12.5px;
+      padding: 10px 16px;
+      z-index: 99;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+    }
     .menu .menu-hint { font-size: 11px; color: var(--ff-text-secondary); display: block; margin-top: 2px; }
 
     /* ── Login view ── */
@@ -591,10 +608,28 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
           <button id="new-form-btn" class="btn-primary" type="button">+ New form</button>
         </div>
         <div id="new-form-menu" class="menu hidden" style="top: 48px; right: 0;">
+          <button type="button" data-template="ai">✨ Create with AI<span class="menu-hint">Describe it in plain English</span></button>
           <button type="button" data-template="blank">Blank form</button>
           <button type="button" data-template="feedback">Customer feedback<span class="menu-hint">5-star rating + comment</span></button>
           <button type="button" data-template="nps">NPS survey<span class="menu-hint">0–10 scale + follow-up</span></button>
           <button type="button" data-template="json">Paste JSON<span class="menu-hint">Use an AI-generated schema</span></button>
+        </div>
+        <div id="ai-pane" class="menu hidden" style="top: 48px; right: 0; width: 360px; padding: 14px;">
+          <div id="ai-form">
+            <div class="prop-row">
+              <label for="ai-desc">Describe your form</label>
+              <textarea id="ai-desc" rows="3" spellcheck="false" placeholder="An RSVP form for a June wedding — attendance, meal choice, song request"></textarea>
+            </div>
+            <div id="ai-error" class="json-error"></div>
+            <button id="ai-generate" class="btn-primary" type="button" style="width: 100%; margin-top: 6px;">Generate form</button>
+          </div>
+          <div id="ai-unconfigured" class="hidden">
+            <div class="sheets-text">
+              <h3>Create with AI isn't set up yet</h3>
+              <p style="margin-top: 6px;">Give the backend an Anthropic API key, then reload:</p>
+              <p style="margin-top: 8px;"><code style="font-family: var(--ff-font-mono); font-size: 11.5px; background: var(--ff-bg); border: 1px solid var(--ff-border); border-radius: 4px; padding: 2px 6px;">wrangler secret put ANTHROPIC_API_KEY</code></p>
+            </div>
+          </div>
         </div>
       </div>
       <div id="list-status" class="status-line hidden"></div>
@@ -758,6 +793,55 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
     }
     function genFieldId(type) {
       return type + "_" + Math.random().toString(36).slice(2, 7);
+    }
+
+    // ── Clipboard ──
+    // Never fake success: Clipboard API needs a secure context and (in
+    // embedded pages) a permission grant, so fall back to execCommand,
+    // and as a last resort show the text for manual copy.
+    function copyToClipboard(text, btn, idleLabel) {
+      function flash(label) {
+        btn.textContent = label;
+        setTimeout(function () { btn.textContent = idleLabel; }, 1800);
+      }
+      function manualFallback() {
+        try {
+          var shown = window.prompt("Copy this link:", text);
+          if (shown !== undefined) { flash(idleLabel); return; }
+        } catch (_) {}
+        // prompt() blocked (sandboxed page) — show a selectable toast
+        var toast = document.createElement("div");
+        toast.className = "copy-toast";
+        toast.textContent = text;
+        toast.style.userSelect = "all";
+        document.body.appendChild(toast);
+        setTimeout(function () { toast.remove(); }, 6000);
+        flash("Copy manually ↓");
+      }
+      function execFallback() {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          ta.setSelectionRange(0, text.length);
+          var ok = document.execCommand("copy");
+          ta.remove();
+          if (ok) { flash("Copied ✓"); return; }
+        } catch (_) {}
+        manualFallback();
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(
+          function () { flash("Copied ✓"); },
+          function () { execFallback(); }
+        );
+      } else {
+        execFallback();
+      }
     }
 
     // ── Views ──
@@ -1814,14 +1898,7 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         var copyBtn = el("button", "btn-ghost", "Copy link");
         copyBtn.type = "button";
         copyBtn.addEventListener("click", function () {
-          var link = location.origin + f.url;
-          var done = function () {
-            copyBtn.textContent = "Copied ✓";
-            setTimeout(function () { copyBtn.textContent = "Copy link"; }, 1500);
-          };
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(link).then(done, done);
-          } else { done(); }
+          copyToClipboard(location.origin + f.url, copyBtn, "Copy link");
         });
 
         actions.appendChild(resultsBtn);
@@ -1922,17 +1999,23 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
     }
     $("new-form-btn").addEventListener("click", function (e) {
       e.stopPropagation();
+      $("ai-pane").classList.add("hidden");
       toggleMenu("new-form-menu");
     });
     $("empty-new-btn").addEventListener("click", function (e) {
       e.stopPropagation();
+      $("ai-pane").classList.add("hidden");
       toggleMenu("new-form-menu");
     });
     $("new-form-menu").addEventListener("click", function (e) {
-      var tpl = e.target && e.target.getAttribute("data-template");
+      var item = e.target && e.target.closest ? e.target.closest("[data-template]") : null;
+      var tpl = item && item.getAttribute("data-template");
       if (!tpl) return;
       $("new-form-menu").classList.add("hidden");
-      if (tpl === "json") {
+      if (tpl === "ai") {
+        e.stopPropagation();
+        openAiPane();
+      } else if (tpl === "json") {
         openEditor(null, tplBlank(), true);
         $("json-text").value = "";
         $("json-text").placeholder = "Paste your AI-generated schema JSON here, then hit Apply.";
@@ -1940,9 +2023,61 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
         openEditor(null, TEMPLATES[tpl](), false);
       }
     });
+
+    // ── Create with AI ──
+    var aiConfigured = null;
+    function loadAiStatus() {
+      apiFetch("/api/generate/status")
+        .then(function (res) { return res.ok ? res.json() : { configured: false }; })
+        .then(function (body) { aiConfigured = !!body.configured; })
+        .catch(function () { aiConfigured = false; });
+    }
+    function openAiPane() {
+      $("ai-form").classList.toggle("hidden", aiConfigured === false);
+      $("ai-unconfigured").classList.toggle("hidden", aiConfigured !== false);
+      $("ai-error").textContent = "";
+      $("ai-pane").classList.remove("hidden");
+      if (aiConfigured !== false) $("ai-desc").focus();
+    }
+    $("ai-pane").addEventListener("click", function (e) { e.stopPropagation(); });
+    $("ai-generate").addEventListener("click", function () {
+      var description = $("ai-desc").value.trim();
+      if (!description) {
+        $("ai-error").textContent = "Describe the form you want first.";
+        return;
+      }
+      var btn = $("ai-generate");
+      btn.disabled = true;
+      btn.textContent = "Generating…";
+      $("ai-error").textContent = "";
+      apiFetch("/api/generate", {
+        method: "POST",
+        body: JSON.stringify({ description: description })
+      })
+        .then(function (res) {
+          return res.json().then(function (body) {
+            if (!res.ok) throw new Error(body.error || ("Generation failed (" + res.status + ")"));
+            return body;
+          });
+        })
+        .then(function (body) {
+          $("ai-pane").classList.add("hidden");
+          $("ai-desc").value = "";
+          openEditor(null, body.schema, false);
+        })
+        .catch(function (err) {
+          $("ai-error").textContent = err.message || "Generation failed.";
+        })
+        .then(function () {
+          btn.disabled = false;
+          btn.textContent = "Generate form";
+        });
+    });
+
     document.addEventListener("click", function () {
       $("new-form-menu").classList.add("hidden");
       $("add-field-menu").classList.add("hidden");
+      $("ai-pane").classList.add("hidden");
     });
 
     $("editor-back").addEventListener("click", function () {
@@ -2000,20 +2135,14 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
       if (e.key === "Escape") {
         $("new-form-menu").classList.add("hidden");
         $("add-field-menu").classList.add("hidden");
+        $("ai-pane").classList.add("hidden");
       }
     });
 
     $("share-embed").addEventListener("click", function () { toggleSharePane("embed"); });
     $("share-qr").addEventListener("click", function () { toggleSharePane("qr"); });
     $("embed-copy").addEventListener("click", function () {
-      var btn = $("embed-copy");
-      var done = function () {
-        btn.textContent = "Copied ✓";
-        setTimeout(function () { btn.textContent = "Copy code"; }, 1500);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText($("embed-code").value).then(done, done);
-      } else { done(); }
+      copyToClipboard($("embed-code").value, $("embed-copy"), "Copy code");
     });
     $("qr-download").addEventListener("click", function () {
       if (!qrSvgText) return;
@@ -2027,18 +2156,11 @@ export const WORKSPACE_HTML: string = `<!DOCTYPE html>
     });
 
     $("share-copy").addEventListener("click", function () {
-      var link = location.origin + (editor.publishedUrl || "");
-      var btn = $("share-copy");
-      var done = function () {
-        btn.textContent = "Copied ✓";
-        setTimeout(function () { btn.textContent = "Copy link"; }, 1500);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(link).then(done, done);
-      } else { done(); }
+      copyToClipboard(location.origin + (editor.publishedUrl || ""), $("share-copy"), "Copy link");
     });
 
     buildAddFieldMenu();
+    loadAiStatus();
 
     // ── Boot ──
     var storedKey = apiKey();
